@@ -1,4 +1,3 @@
-require('dotenv').config() // مهم جدًا
 const mineflayer = require('mineflayer')
 const { pathfinder, Movements } = require('mineflayer-pathfinder')
 const { Client, GatewayIntentBits } = require('discord.js')
