@@ -14,7 +14,7 @@ const discord = new Client({
 })
 
 // 🔐 Login
-discord.login(process.env.MTQ4ODE4MTM5MDgxNzM2MTk0MA.GQVGga.f_3cjGvMSk6wQi7o9WDM03xqfuisGIEjz-N3Vw)
+discord.login(process.env.DISCORD_TOKEN)
 
 // 🤖 Create bot
 function createBot() {
@@ -103,6 +103,6 @@ discord.on('messageCreate', msg => {
 
 // 💬 Minecraft → Discord
 function sendToDiscord(message) {
-  const channel = discord.channels.cache.get(process.env.1404870423744876604)
+  const channel = discord.channels.cache.get(process.env.CHANNEL_ID)
   if (channel) channel.send(message)
 }
