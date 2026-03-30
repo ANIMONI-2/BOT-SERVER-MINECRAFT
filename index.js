@@ -101,10 +101,88 @@ function smartReply(user, msg) {
 // 🚶
 function goToPlayer(username) {
   const target = bot.players[username]
-  if (!target || !target.entity) return
+  if (!target || !target.entity || !bot.entity) return
 
   const goal = new goals.GoalFollow(target.entity, 2)
   bot.pathfinder.setGoal(goal, true)
+
+  setTimeout(() => bot.pathfinder.setGoal(null), 8000)
+}
+
+// 🎉 SYSTEMS
+function systems() {
+
+  // حركة
+  setInterval(() => {
+    if (!bot.entity) return
+    if (Math.random() < 0.5) {
+      bot.setControlState('jump', true)
+      setTimeout(() => bot.setControlState('jump', false), 300)
+    }
+  }, 8000)
+
+  // كاميرا
+  setInterval(() => {
+    if (!bot.entity) return
+    bot.look(Math.random() * Math.PI * 2, (Math.random() - 0.5) * Math.PI, true)
+  }, 4000)
+
+  // 🚶 يمشي عند لاعبين
+  setInterval(() => {
+    if (!bot.entity) return
+    const players = Object.keys(bot.players).filter(p => p !== bot.username && bot.players[p].entity)
+    if (players.length === 0) return
+
+    goToPlayer(players[rand(0, players.length)])
+  }, 15000)
+
+  // 💬 100+ MESSAGES
+  const bigMessages = [
+    'salam 3likom 👋',
+    'kidayrin?',
+    'wach kayn chi wahed hna?',
+    'ana hna 👀',
+    'server zwin 🔥',
+    'li bgha yla3b skywars yji 😈',
+    'wach katl3bo survival?',
+    'ana active 24/24 😎',
+    'ANIMONI best server',
+    'li rb7 ygol GG 😂',
+
+    'wach katfham f pvp?',
+    'nta pro?',
+    'ana kanchof bzaf players',
+    'had server 3ndo future 🔥',
+    'join discord!',
+    'nta fin sakn?',
+    'kidayra l3ba m3ak?',
+    'wach m3ak s7ab?',
+    'ana kan7b had lobby',
+    't3awd nji daba 😂',
+
+    'wach kayn event?',
+    'li 3ndo skills ybayan 😏',
+    'ana kanchof kolchi',
+    'nta mzyan 😂',
+    'hadi gha bidaya',
+    'server ghadi ykbar',
+    'nta 3la rassi',
+    'ana kan3rf kolchi 😈',
+    'wach t9dar tghلبني?',
+    'yallah nchofo skills',
+  ]
+
+  setInterval(() => {
+    if (!bot.entity) return
+    const msg = bigMessages[rand(0, bigMessages.length)]
+    bot.chat(msg)
+  }, 30000)
+}
+
+// 🎲
+function rand(min, max) {
+  return Math.floor(Math.random() * (max - min) + min)
+}  bot.pathfinder.setGoal(goal, true)
 
   setTimeout(() => bot.pathfinder.setGoal(null), 8000)
 }
