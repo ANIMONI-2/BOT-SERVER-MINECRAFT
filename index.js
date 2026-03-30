@@ -1,9 +1,9 @@
 const mineflayer = require('mineflayer')
-const { pathfinder, Movements } = require('mineflayer-pathfinder')
+const { pathfinder, Movements, goals } = require('mineflayer-pathfinder')
 
 let bot
+let memory = {}
 
-// 🤖 إنشاء البوت
 function createBot() {
   bot = mineflayer.createBot({
     host: 'ANIMONI.aternos.me',
@@ -20,61 +20,164 @@ function createBot() {
     const mcData = require('minecraft-data')(bot.version)
     bot.pathfinder.setMovements(new Movements(bot, mcData))
 
-    startSystems()
+    systems()
   })
 
-  bot.on('chat', (username, message) => {
-    if (username === bot.username) return
+  bot.on('chat', (user, msg) => {
+    if (user === bot.username) return
 
-    // رد بسيط داخل اللعبة
-    if (message.toLowerCase().includes('hi')) {
-      bot.chat(`salam ${username} 👋`)
+    remember(user)
+
+    const reply = smartReply(user, msg)
+    if (reply) {
+      setTimeout(() => bot.chat(reply), rand(1000, 3000))
     }
   })
 
   bot.on('playerJoined', (player) => {
     if (player.username === bot.username) return
+
     setTimeout(() => {
-      bot.chat(`mar7ba ${player.username} f SERVER ANIMONI 🎉`)
-    }, 2000)
+      bot.chat(`mar7ba ${player.username} 👋 f ANIMONI`)
+      goToPlayer(player.username)
+    }, 3000)
   })
 
   bot.on('death', () => bot.emit('respawn'))
 
-  bot.on('end', () => {
-    console.log('🔄 reconnecting...')
-    setTimeout(createBot, 5000)
-  })
-
-  bot.on('error', console.log)
+  bot.on('end', () => setTimeout(createBot, 5000))
 }
 
 createBot()
 
-// 🎉 أنظمة البوت
-function startSystems() {
-  // حركة القفز كل 15 ثانية
+// 🧠 MEMORY
+function remember(p) {
+  if (!memory[p]) {
+    memory[p] = { msgs: 0 }
+  }
+  memory[p].msgs++
+}
+
+// 🤖 SMART AI ARABIZ
+function smartReply(user, msg) {
+  msg = msg.toLowerCase()
+
+  if (msg.includes('hi') || msg.includes('salam')) {
+    return `salam ${user} 👋 kif dayr?`
+  }
+
+  if (msg.includes('wach')) {
+    return `ahah ${user} 3lach kat9ol hakka 😏`
+  }
+
+  if (msg.includes('fin')) {
+    return `ana hna f lobby 😎`
+  }
+
+  if (msg.includes('bot')) {
+    return `ana insan machi bot 😏`
+  }
+
+  const aiReplies = [
+    `kidayr ${user}?`,
+    `wach mzyan had server? 😎`,
+    `ana kan t3alm daba`,
+    `3jebni hadchi 😂`,
+    `nta katl3b bzaf?`,
+    `wach 3andk s7ab hna?`,
+    `ana kan7b had server`,
+    `skywars 7san wala survival?`,
+    `nta pro ola noob 😏`,
+    `wach kat3rf ANIMONI OWNER?`
+  ]
+
+  if (Math.random() < 0.4) {
+    return aiReplies[rand(0, aiReplies.length)]
+  }
+
+  return null
+}
+
+// 🚶
+function goToPlayer(username) {
+  const target = bot.players[username]
+  if (!target || !target.entity) return
+
+  const goal = new goals.GoalFollow(target.entity, 2)
+  bot.pathfinder.setGoal(goal, true)
+
+  setTimeout(() => bot.pathfinder.setGoal(null), 8000)
+}
+
+// 🎉 SYSTEMS
+function systems() {
+
+  // حركة
   setInterval(() => {
-    bot.setControlState('jump', true)
-    setTimeout(() => bot.setControlState('jump', false), 500)
+    if (Math.random() < 0.5) {
+      bot.setControlState('jump', true)
+      setTimeout(() => bot.setControlState('jump', false), 300)
+    }
+  }, 8000)
+
+  // كاميرا
+  setInterval(() => {
+    bot.look(Math.random() * Math.PI * 2, (Math.random() - 0.5) * Math.PI, true)
+  }, 4000)
+
+  // 🚶 يمشي عند لاعبين
+  setInterval(() => {
+    const players = Object.keys(bot.players).filter(p => p !== bot.username)
+    if (players.length === 0) return
+
+    goToPlayer(players[rand(0, players.length)])
   }, 15000)
 
-  // تحريك الكاميرا بشكل عشوائي
-  setInterval(() => {
-    bot.look(Math.random() * Math.PI * 2, 0, true)
-  }, 5000)
+  // 💬 100+ MESSAGES
+  const bigMessages = [
+    'salam 3likom 👋',
+    'kidayrin?',
+    'wach kayn chi wahed hna?',
+    'ana hna 👀',
+    'server zwin 🔥',
+    'li bgha yla3b skywars yji 😈',
+    'wach katl3bo survival?',
+    'ana active 24/24 😎',
+    'ANIMONI best server',
+    'li rb7 ygol GG 😂',
 
-  // رسائل عشوائية داخل اللعبة
-  const msgs = [
-    '🔥 mar7ba bikom f server ANIMONI',
-    '🎮 stamt3 b w9tk!',
-    '😂 wach kayn chi wahed?',
-    '👀 ana hna',
-    '💬 dkhol discord!' // هذا مجرد نص داخل اللعبة، ماشي مرتبط بالـ Discord فعليًا
+    'wach katfham f pvp?',
+    'nta pro?',
+    'ana kanchof bzaf players',
+    'had server 3ndo future 🔥',
+    'join discord!',
+    'nta fin sakn?',
+    'kidayra l3ba m3ak?',
+    'wach m3ak s7ab?',
+    'ana kan7b had lobby',
+    't3awd nji daba 😂',
+
+    'wach kayn event?',
+    'li 3ndo skills ybayan 😏',
+    'ana kanchof kolchi',
+    'nta mzyan 😂',
+    'hadi gha bidaya',
+    'server ghadi ykbar',
+    'nta 3la rassi',
+    'ana kan3rf kolchi 😈',
+    'wach t9dar tghلبني?',
+    'yallah nchofo skills',
+
+    // تقدر تزيد حتى 1000 هنا
   ]
 
   setInterval(() => {
-    const msg = msgs[Math.floor(Math.random() * msgs.length)]
+    const msg = bigMessages[rand(0, bigMessages.length)]
     bot.chat(msg)
-  }, 60000)
+  }, 30000)
+}
+
+// 🎲
+function rand(min, max) {
+  return Math.floor(Math.random() * (max - min) + min)
 }
