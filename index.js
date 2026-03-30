@@ -1,9 +1,22 @@
 const mineflayer = require('mineflayer')
+const { pathfinder, Movements } = require('mineflayer-pathfinder')
+const { Client, GatewayIntentBits } = require('discord.js')
 
 let bot
-let playersMemory = {}
-let lastMessageTime = 0
 
+// 🎮 Discord
+const discord = new Client({
+  intents: [
+    GatewayIntentBits.Guilds,
+    GatewayIntentBits.GuildMessages,
+    GatewayIntentBits.MessageContent
+  ]
+})
+
+// 🔐 Login
+discord.login(process.env.MTQ4ODE4MTM5MDgxNzM2MTk0MA.GQVGga.f_3cjGvMSk6wQi7o9WDM03xqfuisGIEjz-N3Vw)
+
+// 🤖 Create bot
 function createBot() {
   bot = mineflayer.createBot({
     host: 'ANIMONI.aternos.me',
@@ -12,156 +25,84 @@ function createBot() {
     version: '1.12.2'
   })
 
+  bot.loadPlugin(pathfinder)
+
   bot.once('spawn', () => {
-    console.log('✅ Realistic Bot Connected')
+    console.log('🔥 BOT CONNECTED')
 
-    antiAFK()
-    randomLook()
-    randomIdle()
-    trackPlayers()
-    randomChat()
+    const mcData = require('minecraft-data')(bot.version)
+    bot.pathfinder.setMovements(new Movements(bot, mcData))
+
+    startSystems()
   })
-
-  bot.on('end', () => setTimeout(createBot, 7000))
-  bot.on('error', console.log)
-
-  bot.on('death', () => bot.emit('respawn'))
 
   bot.on('chat', (username, message) => {
     if (username === bot.username) return
 
-    rememberPlayer(username)
-    humanReply(username, message)
+    // رد بسيط
+    if (message.toLowerCase().includes('hi')) {
+      bot.chat(`salam ${username} 👋`)
+    }
+
+    sendToDiscord(`[MC] ${username}: ${message}`)
   })
+
+  bot.on('playerJoined', (player) => {
+    if (player.username === bot.username) return
+    setTimeout(() => {
+      bot.chat(`mar7ba ${player.username} f server ANIMONI 🎉`)
+    }, 2000)
+  })
+
+  bot.on('death', () => bot.emit('respawn'))
+
+  bot.on('end', () => {
+    console.log('🔄 reconnecting...')
+    setTimeout(createBot, 5000)
+  })
+
+  bot.on('error', console.log)
 }
 
 createBot()
 
-// 🧠 حفظ اللاعبين
-function rememberPlayer(name) {
-  if (!playersMemory[name]) {
-    playersMemory[name] = { seen: Date.now(), messages: 0 }
+// 🎉 Systems
+function startSystems() {
 
-    setTimeout(() => {
-      if (Math.random() < 0.7) {
-        bot.chat(`salam ${name}`)
-      }
-    }, randomDelay())
-  }
-}
-
-// ⏱️ delay واقعي
-function randomDelay() {
-  return Math.floor(Math.random() * 4000) + 2000
-}
-
-// 🧠 رد بشري
-function humanReply(username, msg) {
-  if (Math.random() > 0.6) return // مرات يسكت
-
-  setTimeout(() => {
-
-    let replies = []
-
-    msg = msg.toLowerCase()
-
-    if (msg.includes('hi') || msg.includes('salam')) {
-      replies = ['salam', 'ahlan', 'yo']
-    }
-
-    else if (msg.includes('how') || msg.includes('kifach')) {
-      replies = ['mzyan', 'normal', 'labas']
-    }
-
-    else if (msg.includes('server')) {
-      replies = ['zwin', 'mzyan shwiya', 'kaymchi']
-    }
-
-    else if (msg.includes('bot')) {
-      replies = ['la', '???', 'fin bot']
-    }
-
-    else {
-      replies = [
-        'hmm',
-        'mafhemtch',
-        'ah ok',
-        'wakha',
-        '😅'
-      ]
-    }
-
-    let reply = replies[Math.floor(Math.random() * replies.length)]
-
-    // 😏 أخطاء بشرية
-    if (Math.random() < 0.3) {
-      reply = reply.replace('a', '')
-    }
-
-    bot.chat(reply)
-
-  }, randomDelay())
-}
-
-// 💬 شات قليل (باش مايبانش سبام)
-function randomChat() {
+  // حركة
   setInterval(() => {
-    if (!bot.player) return
-
-    if (Math.random() < 0.3) {
-      const msgs = [
-        'wach kayn chi wahed',
-        'hmm',
-        'server hna',
-        'fin players',
-        '😅'
-      ]
-
-      bot.chat(msgs[Math.floor(Math.random() * msgs.length)])
-    }
-
-  }, 30000)
-}
-
-// 🕺 anti afk
-function antiAFK() {
-  setInterval(() => {
-    if (Math.random() < 0.5) {
-      bot.setControlState('jump', true)
-      setTimeout(() => bot.setControlState('jump', false), 300)
-    }
+    bot.setControlState('jump', true)
+    setTimeout(() => bot.setControlState('jump', false), 500)
   }, 15000)
-}
 
-// 👀 camera
-function randomLook() {
+  // تحريك الكاميرا
   setInterval(() => {
-    const yaw = Math.random() * Math.PI * 2
-    const pitch = (Math.random() - 0.5) * Math.PI
-    bot.look(yaw, pitch, true)
+    bot.look(Math.random() * Math.PI * 2, 0, true)
   }, 5000)
+
+  // رسائل عشوائية
+  const msgs = [
+    '🔥 mar7ba bikom f server ANIMONI',
+    '🎮 stamt3 b w9tk!',
+    '😂 wach kayn chi wahed?',
+    '👀 ana hna',
+    '💬 dkhol discord!'
+  ]
+
+  setInterval(() => {
+    const msg = msgs[Math.floor(Math.random() * msgs.length)]
+    bot.chat(msg)
+  }, 60000)
 }
 
-// 🧍‍♂️ idle movement (حركات صغيرة)
-function randomIdle() {
-  setInterval(() => {
-    if (Math.random() < 0.4) {
-      bot.setControlState('forward', true)
+// 💬 Discord → Minecraft
+discord.on('messageCreate', msg => {
+  if (msg.author.bot) return
+  bot.chat(`[DC] ${msg.author.username}: ${msg.content}`)
+})
 
-      setTimeout(() => {
-        bot.setControlState('forward', false)
-      }, Math.floor(Math.random() * 2000) + 1000)
-    }
-  }, 10000)
-}
-
-// 👥 tracking
-function trackPlayers() {
-  setInterval(() => {
-    for (const name in bot.players) {
-      if (name !== bot.username) {
-        rememberPlayer(name)
-      }
-    }
-  }, 5000)
+// 💬 Minecraft → Discord
+function sendToDiscord(message) {
+  const channel = discord.channels.cache.get(process.env.1404870423744876604)
+  if (channel) channel.send(message)
 }
