@@ -1,9 +1,12 @@
 {
-  "name": "ANIMONI_BOT",
+  "name": "animoni-real-bot",
   "version": "1.0.0",
+  "description": "Human-like Minecraft Lobby Bot",
   "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
   "dependencies": {
-    "mineflayer": "^4.0.0",
-    "mineflayer-pathfinder": "^2.4.5"
+    "mineflayer": "^4.0.0"
   }
 }
