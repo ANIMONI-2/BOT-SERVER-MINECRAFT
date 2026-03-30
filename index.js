@@ -35,7 +35,7 @@ function createBot() {
   bot.on('playerJoined', (player) => {
     if (player.username === bot.username) return
     setTimeout(() => {
-      bot.chat(`marhba ${player.username} f SERVER ANIMONI 🎉`)
+      bot.chat(`mar7ba ${player.username} f SERVER ANIMONI 🎉`)
     }, 2000)
   })
 
