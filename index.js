@@ -36,7 +36,6 @@ function createBot() {
     if (user === bot.username) return
     ensureMemory(user)
 
-    // حماية OWNER
     if (msg.toLowerCase().includes(OWNER.toLowerCase()) && user !== OWNER) {
       sendMessage(`7tarm ${OWNER} a ${user} 👑`)
     }
@@ -50,9 +49,10 @@ function createBot() {
   bot.on('playerJoined', (player) => {
     if (player.username === bot.username) return
     ensureMemory(player.username)
+
     setTimeout(() => {
       sendMessage(getWelcome(player.username))
-      goToPlayer(player.username)
+      goToPlayer(player.username) // تابع اللاعب بعد التأكد entity
     }, 3000)
   })
 
@@ -74,6 +74,7 @@ function createBot() {
   })
 }
 
+// Stop bot and reconnect
 function stopBotAndReconnect() {
   if (reconnecting) return
   reconnecting = true
@@ -97,6 +98,7 @@ function stopBotAndReconnect() {
   }, 5000)
 }
 
+// Ping TCP
 function checkServerOnline(host, port, callback) {
   const socket = new net.Socket()
   let called = false
@@ -158,7 +160,7 @@ function smartAI(user,msg) {
 }
 
 function removeIllegalChars(str) {
-  return str.replace(/[^ -~]+/g, '') // يحذف أي حرف غير ASCII صالح
+  return str.replace(/[^ -~]+/g, '') // يحيد أي حرف غير ASCII صالح
 }
 
 // Welcome
@@ -172,16 +174,22 @@ function sendMessage(msg) {
   lastMessageTime=now
 }
 
-// Follow
+// Follow with retry
 function goToPlayer(username) {
-  const target = bot.players[username]
-  if(!target||!target.entity||!bot.entity) return
-  const level = getLevel(username)
-  if(level==='friend'||level==='bestie'||username===OWNER){
-    const goal = new goals.GoalFollow(target.entity,2)
-    bot.pathfinder.setGoal(goal,true)
-    setTimeout(()=>bot.pathfinder.setGoal(null),8000)
+  const attemptFollow = () => {
+    const target = bot.players[username]
+    if (!target || !target.entity || !bot.entity) {
+      setTimeout(attemptFollow, 1000)
+      return
+    }
+    const level = getLevel(username)
+    if (level === 'friend' || level === 'bestie' || username === OWNER) {
+      const goal = new goals.GoalFollow(target.entity, 2)
+      bot.pathfinder.setGoal(goal, true)
+      setTimeout(() => bot.pathfinder.setGoal(null), 8000)
+    }
   }
+  attemptFollow()
 }
 
 // Favorite
