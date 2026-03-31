@@ -26,12 +26,13 @@ function createBot() {
     systems()
   })
 
+  // 💬 CHAT
   bot.on('chat', (user, msg) => {
     if (user === bot.username) return
 
     ensureMemory(user)
 
-    // 🛡️ حماية OWNER
+    // حماية OWNER
     if (msg.toLowerCase().includes(OWNER.toLowerCase()) && user !== OWNER) {
       sendMessage(`7tarm ${OWNER} a ${user} 👑`)
     }
@@ -44,9 +45,9 @@ function createBot() {
     addFriendship(user, 5)
   })
 
+  // 👤 PLAYER JOINED
   bot.on('playerJoined', (player) => {
     if (player.username === bot.username) return
-
     ensureMemory(player.username)
 
     setTimeout(() => {
@@ -56,7 +57,22 @@ function createBot() {
   })
 
   bot.on('death', () => bot.emit('respawn'))
-  bot.on('end', () => setTimeout(createBot, 5000))
+
+  // ⚠️ ERROR HANDLING
+  bot.on('error', (err) => {
+    console.log('❌ BOT ERROR:', err.message)
+    setTimeout(createBot, 10000)
+  })
+
+  bot.on('kicked', (reason) => {
+    console.log('❌ BOT KICKED:', reason)
+    setTimeout(createBot, 10000)
+  })
+
+  bot.on('end', () => {
+    console.log('⚠️ BOT DISCONNECTED, RECONNECTING...')
+    setTimeout(createBot, 10000)
+  })
 }
 
 createBot()
