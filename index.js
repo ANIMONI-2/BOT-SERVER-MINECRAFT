@@ -1,8 +1,11 @@
 const mineflayer = require('mineflayer')
 const { pathfinder, Movements, goals } = require('mineflayer-pathfinder')
 
+const OWNER = "ANIMONI"
+
 let bot
 let memory = {}
+let lastMessageTime = 0
 
 function createBot() {
   bot = mineflayer.createBot({
@@ -28,23 +31,29 @@ function createBot() {
 
     remember(user)
 
-    const reply = smartReply(user, msg)
-    if (reply) {
-      setTimeout(() => bot.chat(reply), rand(1000, 3000))
+    // 🛡️ حماية OWNER
+    if (msg.toLowerCase().includes(OWNER.toLowerCase()) && user !== OWNER) {
+      sendMessage(`7tarm ${OWNER} a ${user} 👑`)
     }
+
+    updateMood(user, msg)
+
+    const reply = smartAI(user, msg)
+    if (reply) sendMessage(reply)
+
+    addFriendship(user, 5)
   })
 
   bot.on('playerJoined', (player) => {
     if (player.username === bot.username) return
 
     setTimeout(() => {
-      bot.chat(`mar7ba ${player.username} 👋 f ANIMONI`)
+      sendMessage(getWelcome(player.username))
       goToPlayer(player.username)
     }, 3000)
   })
 
   bot.on('death', () => bot.emit('respawn'))
-
   bot.on('end', () => setTimeout(createBot, 5000))
 }
 
@@ -53,137 +62,194 @@ createBot()
 // 🧠 MEMORY
 function remember(p) {
   if (!memory[p]) {
-    memory[p] = { msgs: 0 }
+    memory[p] = {
+      msgs: 0,
+      friendship: p === OWNER ? 100 : 0,
+      mood: 'normal'
+    }
   }
   memory[p].msgs++
 }
 
-// 🤖 SMART AI ARABIZ
-function smartReply(user, msg) {
+function addFriendship(user, amount) {
+  memory[user].friendship += amount
+  if (memory[user].friendship > 100) memory[user].friendship = 100
+  if (memory[user].friendship < 0) memory[user].friendship = 0
+}
+
+function getLevel(user) {
+  const f = memory[user].friendship
+  if (f < 20) return 'stranger'
+  if (f < 50) return 'normal'
+  if (f < 80) return 'friend'
+  return 'bestie'
+}
+
+// 😡 MOOD
+function updateMood(user, msg) {
   msg = msg.toLowerCase()
 
-  if (msg.includes('hi') || msg.includes('salam')) {
-    return `salam ${user} 👋 kif dayr?`
+  if (msg.includes('noob') || msg.includes('stupid')) {
+    memory[user].mood = 'angry'
+    addFriendship(user, -5)
+  } else if (msg.includes('sahbi') || msg.includes('zwin')) {
+    memory[user].mood = 'happy'
+    addFriendship(user, 10)
+  } else {
+    memory[user].mood = 'normal'
+  }
+}
+
+// 🤖 AI
+function smartAI(user, msg) {
+
+  if (user === OWNER) {
+    const ownerReplies = [
+      `wa malik ${user} 👑`,
+      `ana m3ak a ${user}`,
+      `nta boss 🔥`,
+      `amrni`,
+      `kolchi mzyan`
+    ]
+    return ownerReplies[rand(0, ownerReplies.length)]
   }
 
-  if (msg.includes('wach')) {
-    return `ahah ${user} 3lach kat9ol hakka 😏`
+  const level = getLevel(user)
+  const mood = memory[user].mood
+
+  if (mood === 'angry') {
+    const angry = [
+      `sir b3d mni ${user}`,
+      `hder b7ya`,
+      `ma3jbnich had lhdra`,
+      `khalli ljo zwin`
+    ]
+    return angry[rand(0, angry.length)]
+  }
+
+  if (mood === 'happy') {
+    const happy = [
+      `wa sahbi ${user} 😂`,
+      `nta wa3er`,
+      `kan7b lhdra m3ak`,
+      `nta zwin`
+    ]
+    return happy[rand(0, happy.length)]
+  }
+
+  if (msg.includes('salam') || msg.includes('hi')) {
+    return `salam ${user} 👋`
   }
 
   if (msg.includes('fin')) {
-    return `ana hna f lobby 😎`
+    return `ana f lobby 😎`
   }
 
-  if (msg.includes('bot')) {
-    return `ana insan machi bot 😏`
-  }
-
-  const aiReplies = [
-    `kidayr ${user}?`,
-    `wach mzyan had server? 😎`,
-    `ana kan t3alm daba`,
-    `3jebni hadchi 😂`,
-    `nta katl3b bzaf?`,
-    `wach 3andk s7ab hna?`,
-    `ana kan7b had server`,
-    `skywars 7san wala survival?`,
-    `nta pro ola noob 😏`,
-    `wach kat3rf ANIMONI OWNER?`
-  ]
-
-  if (Math.random() < 0.4) {
-    return aiReplies[rand(0, aiReplies.length)]
-  }
-
-  return null
+  if (level === 'stranger') return `wach smitk ${user}?`
+  if (level === 'normal') return `kidayr ${user}?`
+  if (level === 'friend') return `nta sahbi ${user}`
+  if (level === 'bestie') return `nta khoya ${user} ❤️`
 }
 
-// 🚶
+// 🟢 Welcome
+function getWelcome(user) {
+  if (user === OWNER) return `mar7ba malik ${user} 👑`
+  return `mar7ba ${user} 👋`
+}
+
+// 🚫 Anti Spam
+function sendMessage(msg) {
+  const now = Date.now()
+  if (now - lastMessageTime < 4000) return
+
+  bot.chat(msg)
+  lastMessageTime = now
+}
+
+// 🚶 Follow
 function goToPlayer(username) {
   const target = bot.players[username]
   if (!target || !target.entity || !bot.entity) return
 
-  const goal = new goals.GoalFollow(target.entity, 2)
-  bot.pathfinder.setGoal(goal, true)
+  const level = getLevel(username)
 
-  setTimeout(() => {
-    if (bot.pathfinder) bot.pathfinder.setGoal(null)
-  }, 8000)
+  if (level === 'friend' || level === 'bestie' || username === OWNER) {
+    const goal = new goals.GoalFollow(target.entity, 2)
+    bot.pathfinder.setGoal(goal, true)
+    setTimeout(() => bot.pathfinder.setGoal(null), 8000)
+  }
 }
 
-// 🎉 SYSTEMS
+// ⭐ Favorite
+function getFavorite() {
+  let best = OWNER
+  let max = -1
+
+  for (let p in memory) {
+    if (memory[p].friendship > max) {
+      max = memory[p].friendship
+      best = p
+    }
+  }
+
+  return best
+}
+
+// 📢 SYSTEMS + ANNOUNCEMENTS 🇲🇦
 function systems() {
 
-  // حركة jump
-  setInterval(() => {
-    if (!bot.entity) return
-    if (Math.random() < 0.5) {
-      bot.setControlState('jump', true)
-      setTimeout(() => {
-        if (bot.entity) bot.setControlState('jump', false)
-      }, 300)
-    }
-  }, 8000)
+  const announcements = [
 
-  // كاميرا look
-  setInterval(() => {
-    if (!bot.entity) return
-    bot.look(Math.random() * Math.PI * 2, (Math.random() - 0.5) * Math.PI, true)
-  }, 4000)
-
-  // يمشي عند لاعبين
-  setInterval(() => {
-    if (!bot.entity) return
-    const players = Object.keys(bot.players).filter(p => p !== bot.username && bot.players[p].entity)
-    if (players.length === 0) return
-
-    goToPlayer(players[rand(0, players.length)])
-  }, 15000)
-
-  // 💬 100+ MESSAGES
-  const bigMessages = [
-    'salam 3likom 👋',
-    'kidayrin?',
-    'wach kayn chi wahed hna?',
-    'ana hna 👀',
-    'server zwin 🔥',
-    'li bgha yla3b skywars yji 😈',
-    'wach katl3bo survival?',
-    'ana active 24/24 😎',
-    'ANIMONI best server',
-    'li rb7 ygol GG 😂',
-
-    'wach katfham f pvp?',
-    'nta pro?',
-    'ana kanchof bzaf players',
-    'had server 3ndo future 🔥',
-    'join discord!',
-    'nta fin sakn?',
-    'kidayra l3ba m3ak?',
-    'wach m3ak s7ab?',
-    'ana kan7b had lobby',
-    't3awd nji daba 😂',
-
-    'wach kayn event?',
-    'li 3ndo skills ybayan 😏',
-    'ana kanchof kolchi',
-    'nta mzyan 😂',
-    'hadi gha bidaya',
-    'server ghadi ykbar',
-    'nta 3la rassi',
-    'ana kan3rf kolchi 😈',
-    'wach t9dar tghلبني?',
-    'yallah nchofo skills',
+    "§6ANIMONI » mar7ba bikom f server 🇲🇦🔥",
+    "§bTIP » dir /lobby bach ترجع lobby",
+    "§aCOMMAND » dir /spawn bach ترجع spawn",
+    "§dFEATURE » 3andna night vision dayma 🌙",
+    "§6INFO » IP dyal server: ANIMONI.aternos.me",
+    "§cRULE » mamnou3 hacks w spam 🚫",
+    "§eTIP » dir /tpa bach tmchi 3nd s7abk",
+    "§aECONOMY » dir /pay bach tsift flos",
+    "§bHOME » dir /sethome w /home",
+    "§dGAMES » skywars mawjouda ☁️",
+    "§6INFO » ila n3s chi wa7d kaywli nhar 🌞",
+    "§cRULE » 7tarm la3bin 🚫",
+    "§aTEAM » l3b m3a s7abk 🤝",
+    "§bOWNER » 7tarm ANIMONI 👑",
+    "§eTIP » qta3 chjar b axe bsr3a 🪓",
+    "§dFUN » enjoy survival 🌍",
+    "§6JOIN » 3ayet l s7abk 🔥",
+    "§cRULE » mamnou3 i3lan 3la servers 🚫",
+    "§aHELP » ila 7tajiti chi 7aja goul l admin 👮"
   ]
 
+  let i = 0
+
   setInterval(() => {
-    if (!bot.entity) return
-    const msg = bigMessages[rand(0, bigMessages.length)]
-    bot.chat(msg)
-  }, 30000)
+    sendMessage(announcements[i])
+    i++
+    if (i >= announcements.length) i = 0
+  }, 60000)
+
+  // random talk
+  setInterval(() => {
+    const fav = getFavorite()
+    if (fav) sendMessage(`fin ghabrti ${fav} 😂`)
+  }, 40000)
+
+  // jump
+  setInterval(() => {
+    if (Math.random() < 0.3) {
+      bot.setControlState('jump', true)
+      setTimeout(() => bot.setControlState('jump', false), 300)
+    }
+  }, 9000)
+
+  // look
+  setInterval(() => {
+    bot.look(Math.random() * Math.PI * 2, (Math.random() - 0.5) * Math.PI, true)
+  }, 5000)
 }
 
-// 🎲 RANDOM
+// 🎲
 function rand(min, max) {
   return Math.floor(Math.random() * (max - min) + min)
-  }
+}
