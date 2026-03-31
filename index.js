@@ -26,13 +26,12 @@ function createBot() {
     systems()
   })
 
-  // 💬 CHAT
+  // 💬 Chat
   bot.on('chat', (user, msg) => {
     if (user === bot.username) return
 
     ensureMemory(user)
 
-    // حماية OWNER
     if (msg.toLowerCase().includes(OWNER.toLowerCase()) && user !== OWNER) {
       sendMessage(`7tarm ${OWNER} a ${user} 👑`)
     }
@@ -45,7 +44,7 @@ function createBot() {
     addFriendship(user, 5)
   })
 
-  // 👤 PLAYER JOINED
+  // 👤 Player joined
   bot.on('playerJoined', (player) => {
     if (player.username === bot.username) return
     ensureMemory(player.username)
@@ -58,21 +57,31 @@ function createBot() {
 
   bot.on('death', () => bot.emit('respawn'))
 
-  // ⚠️ ERROR HANDLING
+  // ⚠️ ERROR HANDLING & RECONNECT
   bot.on('error', (err) => {
     console.log('❌ BOT ERROR:', err.message)
-    setTimeout(createBot, 10000)
+    reconnectBot()
   })
 
   bot.on('kicked', (reason) => {
     console.log('❌ BOT KICKED:', reason)
-    setTimeout(createBot, 10000)
+    reconnectBot()
   })
 
   bot.on('end', () => {
     console.log('⚠️ BOT DISCONNECTED, RECONNECTING...')
-    setTimeout(createBot, 10000)
+    reconnectBot()
   })
+}
+
+// 🔁 Reconnect مع تأخير قصير
+function reconnectBot() {
+  const delay = 3000 // 3 ثواني قبل إعادة الدخول
+  console.log(`⏳ Waiting ${delay/1000}s before reconnect...`)
+  setTimeout(() => {
+    console.log('🔄 Reconnecting bot...')
+    createBot()
+  }, delay)
 }
 
 createBot()
@@ -105,7 +114,7 @@ function getLevel(user) {
   return 'bestie'
 }
 
-// 😡 MOOD
+// 😡 Mood
 function updateMood(user, msg) {
   ensureMemory(user)
   msg = msg.toLowerCase()
@@ -159,13 +168,8 @@ function smartAI(user, msg) {
     return happy[rand(0, happy.length)]
   }
 
-  if (msg.includes('salam') || msg.includes('hi')) {
-    return `salam ${user} 👋`
-  }
-
-  if (msg.includes('fin')) {
-    return `ana f lobby 😎`
-  }
+  if (msg.includes('salam') || msg.includes('hi')) return `salam ${user} 👋`
+  if (msg.includes('fin')) return `ana f lobby 😎`
 
   if (level === 'stranger') return `wach smitk ${user}?`
   if (level === 'normal') return `kidayr ${user}?`
@@ -182,7 +186,6 @@ function getWelcome(user) {
 function sendMessage(msg) {
   const now = Date.now()
   if (now - lastMessageTime < 4000) return
-
   bot.chat(msg)
   lastMessageTime = now
 }
@@ -216,9 +219,8 @@ function getFavorite() {
   return best
 }
 
-// 📢 SYSTEMS + ANNOUNCEMENTS 🇲🇦
+// 📢 Systems + Announcements
 function systems() {
-
   const announcements = [
     "§6ANIMONI » mar7ba bikom f server 🇲🇦🔥",
     "§bTIP » dir /lobby bach ترجع lobby",
@@ -242,7 +244,6 @@ function systems() {
   ]
 
   let i = 0
-
   setInterval(() => {
     sendMessage(announcements[i])
     i++
@@ -269,7 +270,7 @@ function systems() {
   }, 5000)
 }
 
-// 🎲
+// 🎲 Random function
 function rand(min, max) {
   return Math.floor(Math.random() * (max - min) + min)
 }
