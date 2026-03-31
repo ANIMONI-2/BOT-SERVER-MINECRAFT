@@ -1,16 +1,20 @@
 const mineflayer = require('mineflayer')
 const { pathfinder, Movements, goals } = require('mineflayer-pathfinder')
+const net = require('net') // باش نديرو ping TCP للسيرفر
 
 const OWNER = "ANIMONI"
+const SERVER_HOST = 'ANIMONI.aternos.me'
+const SERVER_PORT = 59644
 
 let bot
 let memory = {}
 let lastMessageTime = 0
+let reconnectInterval = null
 
 function createBot() {
   bot = mineflayer.createBot({
-    host: 'ANIMONI.aternos.me',
-    port: 59644,
+    host: SERVER_HOST,
+    port: SERVER_PORT,
     username: 'ANIMONIBOT',
     version: '1.12.2'
   })
@@ -29,7 +33,6 @@ function createBot() {
   // 💬 Chat
   bot.on('chat', (user, msg) => {
     if (user === bot.username) return
-
     ensureMemory(user)
 
     if (msg.toLowerCase().includes(OWNER.toLowerCase()) && user !== OWNER) {
@@ -57,34 +60,64 @@ function createBot() {
 
   bot.on('death', () => bot.emit('respawn'))
 
-  // ⚠️ ERROR HANDLING & RECONNECT
+  // ⚠️ ERROR HANDLING
   bot.on('error', (err) => {
     console.log('❌ BOT ERROR:', err.message)
-    reconnectBot()
+    stopBotAndReconnect()
   })
 
   bot.on('kicked', (reason) => {
     console.log('❌ BOT KICKED:', reason)
-    reconnectBot()
+    stopBotAndReconnect()
   })
 
   bot.on('end', () => {
-    console.log('⚠️ BOT DISCONNECTED, RECONNECTING...')
-    reconnectBot()
+    console.log('⚠️ BOT DISCONNECTED')
+    stopBotAndReconnect()
   })
 }
 
-// 🔁 Reconnect مع تأخير قصير
-function reconnectBot() {
-  const delay = 3000 // 3 ثواني قبل إعادة الدخول
-  console.log(`⏳ Waiting ${delay/1000}s before reconnect...`)
-  setTimeout(() => {
-    console.log('🔄 Reconnecting bot...')
-    createBot()
-  }, delay)
+// 🚦 توقف البوت وابدأ فحص السيرفر
+function stopBotAndReconnect() {
+  try {
+    if (bot) bot.quit()
+  } catch {}
+  bot = null
+
+  if (!reconnectInterval) {
+    reconnectInterval = setInterval(() => {
+      checkServerOnline(SERVER_HOST, SERVER_PORT, (online) => {
+        if (online) {
+          console.log('🔄 SERVER ONLINE! Reconnecting bot...')
+          clearInterval(reconnectInterval)
+          reconnectInterval = null
+          createBot()
+        } else {
+          console.log('⏳ SERVER OFFLINE. Waiting...')
+        }
+      })
+    }, 5000) // فحص السيرفر كل 5 ثواني
+  }
 }
 
-createBot()
+// 🔍 Ping TCP للسيرفر
+function checkServerOnline(host, port, callback) {
+  const socket = new net.Socket()
+  let called = false
+  socket.setTimeout(2000)
+  socket.on('connect', () => {
+    called = true
+    socket.destroy()
+    callback(true)
+  })
+  socket.on('timeout', () => {
+    if (!called) { called = true; socket.destroy(); callback(false) }
+  })
+  socket.on('error', () => {
+    if (!called) { called = true; socket.destroy(); callback(false) }
+  })
+  socket.connect(port, host)
+}
 
 // 🧠 MEMORY
 function ensureMemory(user) {
@@ -118,7 +151,6 @@ function getLevel(user) {
 function updateMood(user, msg) {
   ensureMemory(user)
   msg = msg.toLowerCase()
-
   if (msg.includes('noob') || msg.includes('stupid')) {
     memory[user].mood = 'angry'
     addFriendship(user, -5)
@@ -133,48 +165,20 @@ function updateMood(user, msg) {
 // 🤖 AI
 function smartAI(user, msg) {
   ensureMemory(user)
-
   if (user === OWNER) {
-    const ownerReplies = [
-      `wa malik ${user} 👑`,
-      `ana m3ak a ${user}`,
-      `nta boss 🔥`,
-      `amrni`,
-      `kolchi mzyan`
-    ]
+    const ownerReplies = [`wa malik ${user} 👑`, `ana m3ak a ${user}`, `nta boss 🔥`, `amrni`, `kolchi mzyan`]
     return ownerReplies[rand(0, ownerReplies.length)]
   }
-
   const level = getLevel(user)
   const mood = memory[user].mood
-
-  if (mood === 'angry') {
-    const angry = [
-      `sir b3d mni ${user}`,
-      `hder b7ya`,
-      `ma3jbnich had lhdra`,
-      `khalli ljo zwin`
-    ]
-    return angry[rand(0, angry.length)]
-  }
-
-  if (mood === 'happy') {
-    const happy = [
-      `wa sahbi ${user} 😂`,
-      `nta wa3er`,
-      `kan7b lhdra m3ak`,
-      `nta zwin`
-    ]
-    return happy[rand(0, happy.length)]
-  }
-
+  if (mood === 'angry') return [`sir b3d mni ${user}`, `hder b7ya`, `ma3jbnich had lhdra`, `khalli ljo zwin`][rand(0,4)]
+  if (mood === 'happy') return [`wa sahbi ${user} 😂`, `nta wa3er`, `kan7b lhdra m3ak`, `nta zwin`][rand(0,4)]
   if (msg.includes('salam') || msg.includes('hi')) return `salam ${user} 👋`
   if (msg.includes('fin')) return `ana f lobby 😎`
-
   if (level === 'stranger') return `wach smitk ${user}?`
   if (level === 'normal') return `kidayr ${user}?`
   if (level === 'friend') return `nta sahbi ${user}`
-  if (level === 'bestie') return `nta khoya ${user} ❤️`
+  return `nta khoya ${user} ❤️`
 }
 
 // 🟢 Welcome
@@ -186,7 +190,7 @@ function getWelcome(user) {
 function sendMessage(msg) {
   const now = Date.now()
   if (now - lastMessageTime < 4000) return
-  bot.chat(msg)
+  if (bot) bot.chat(msg)
   lastMessageTime = now
 }
 
@@ -194,9 +198,7 @@ function sendMessage(msg) {
 function goToPlayer(username) {
   const target = bot.players[username]
   if (!target || !target.entity || !bot.entity) return
-
   const level = getLevel(username)
-
   if (level === 'friend' || level === 'bestie' || username === OWNER) {
     const goal = new goals.GoalFollow(target.entity, 2)
     bot.pathfinder.setGoal(goal, true)
@@ -206,16 +208,8 @@ function goToPlayer(username) {
 
 // ⭐ Favorite
 function getFavorite() {
-  let best = OWNER
-  let max = -1
-
-  for (let p in memory) {
-    if (memory[p].friendship > max) {
-      max = memory[p].friendship
-      best = p
-    }
-  }
-
+  let best = OWNER, max = -1
+  for (let p in memory) if (memory[p].friendship > max) { max = memory[p].friendship; best = p }
   return best
 }
 
@@ -231,46 +225,20 @@ function systems() {
     "§eTIP » dir /tpa bach tmchi 3nd s7abk",
     "§aECONOMY » dir /pay bach tsift flos",
     "§bHOME » dir /sethome w /home",
-    "§dGAMES » skywars mawjouda ☁️",
-    "§6INFO » ila n3s chi wa7d kaywli nhar 🌞",
-    "§cRULE » 7tarm la3bin 🚫",
-    "§aTEAM » l3b m3a s7abk 🤝",
-    "§bOWNER » 7tarm ANIMONI 👑",
-    "§eTIP » qta3 chjar b axe bsr3a 🪓",
-    "§dFUN » enjoy survival 🌍",
-    "§6JOIN » 3ayet l s7abk 🔥",
-    "§cRULE » mamnou3 i3lan 3la servers 🚫",
-    "§aHELP » ila 7tajiti chi 7aja goul l admin 👮"
+    "§dGAMES » skywars mawjouda ☁️"
   ]
-
   let i = 0
-  setInterval(() => {
-    sendMessage(announcements[i])
-    i++
-    if (i >= announcements.length) i = 0
-  }, 60000)
-
-  // random talk
-  setInterval(() => {
-    const fav = getFavorite()
-    if (fav) sendMessage(`fin ghabrti ${fav} 😂`)
-  }, 40000)
-
-  // jump
-  setInterval(() => {
-    if (Math.random() < 0.3) {
-      bot.setControlState('jump', true)
-      setTimeout(() => bot.setControlState('jump', false), 300)
-    }
-  }, 9000)
-
-  // look
-  setInterval(() => {
-    bot.look(Math.random() * Math.PI * 2, (Math.random() - 0.5) * Math.PI, true)
-  }, 5000)
+  setInterval(() => { sendMessage(announcements[i]); i++; if(i>=announcements.length)i=0 }, 60000)
+  setInterval(() => { const fav = getFavorite(); if(fav) sendMessage(`fin ghabrti ${fav} 😂`) }, 40000)
+  setInterval(() => { if(Math.random()<0.3) { bot.setControlState('jump',true); setTimeout(()=>bot.setControlState('jump',false),300) } },9000)
+  setInterval(()=>{bot.look(Math.random()*Math.PI*2,(Math.random()-0.5)*Math.PI,true)},5000)
 }
 
 // 🎲 Random function
-function rand(min, max) {
-  return Math.floor(Math.random() * (max - min) + min)
-}
+function rand(min,max){return Math.floor(Math.random()*(max-min)+min)}
+
+// ✅ ابدأ التشغيل
+checkServerOnline(SERVER_HOST, SERVER_PORT, (online)=>{
+  if(online) createBot()
+  else stopBotAndReconnect()
+})
