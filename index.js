@@ -29,7 +29,7 @@ function createBot() {
   bot.on('chat', (user, msg) => {
     if (user === bot.username) return
 
-    remember(user)
+    ensureMemory(user)
 
     // 🛡️ حماية OWNER
     if (msg.toLowerCase().includes(OWNER.toLowerCase()) && user !== OWNER) {
@@ -47,6 +47,8 @@ function createBot() {
   bot.on('playerJoined', (player) => {
     if (player.username === bot.username) return
 
+    ensureMemory(player.username)
+
     setTimeout(() => {
       sendMessage(getWelcome(player.username))
       goToPlayer(player.username)
@@ -60,24 +62,26 @@ function createBot() {
 createBot()
 
 // 🧠 MEMORY
-function remember(p) {
-  if (!memory[p]) {
-    memory[p] = {
+function ensureMemory(user) {
+  if (!memory[user]) {
+    memory[user] = {
       msgs: 0,
-      friendship: p === OWNER ? 100 : 0,
+      friendship: user === OWNER ? 100 : 0,
       mood: 'normal'
     }
   }
-  memory[p].msgs++
+  memory[user].msgs++
 }
 
 function addFriendship(user, amount) {
+  ensureMemory(user)
   memory[user].friendship += amount
   if (memory[user].friendship > 100) memory[user].friendship = 100
   if (memory[user].friendship < 0) memory[user].friendship = 0
 }
 
 function getLevel(user) {
+  ensureMemory(user)
   const f = memory[user].friendship
   if (f < 20) return 'stranger'
   if (f < 50) return 'normal'
@@ -87,6 +91,7 @@ function getLevel(user) {
 
 // 😡 MOOD
 function updateMood(user, msg) {
+  ensureMemory(user)
   msg = msg.toLowerCase()
 
   if (msg.includes('noob') || msg.includes('stupid')) {
@@ -102,6 +107,7 @@ function updateMood(user, msg) {
 
 // 🤖 AI
 function smartAI(user, msg) {
+  ensureMemory(user)
 
   if (user === OWNER) {
     const ownerReplies = [
@@ -153,8 +159,7 @@ function smartAI(user, msg) {
 
 // 🟢 Welcome
 function getWelcome(user) {
-  if (user === OWNER) return `mar7ba malik ${user} 👑`
-  return `mar7ba ${user} 👋`
+  return user === OWNER ? `mar7ba malik ${user} 👑` : `mar7ba ${user} 👋`
 }
 
 // 🚫 Anti Spam
@@ -199,7 +204,6 @@ function getFavorite() {
 function systems() {
 
   const announcements = [
-
     "§6ANIMONI » mar7ba bikom f server 🇲🇦🔥",
     "§bTIP » dir /lobby bach ترجع lobby",
     "§aCOMMAND » dir /spawn bach ترجع spawn",
