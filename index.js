@@ -1,25 +1,173 @@
 const mineflayer = require('mineflayer')
-const { pathfinder, Movements, goals } = require('mineflayer-pathfinder')
+const { pathfinder, Movements } = require('mineflayer-pathfinder')
 const fs = require('fs-extra')
 const similarity = require('string-similarity')
 const axios = require('axios')
 
-const OWNER = "ANIMONI"
-
 let bot
 let brain = []
 let players = {}
-let emotions = {} // 😈 لكل لاعب mood
+let emotions = {}
+let conversations = {}
 let lastMessageTime = 0
 
-// 📂 load
+// 📂 LOAD
 if (fs.existsSync('brain.json')) brain = fs.readJsonSync('brain.json')
 if (fs.existsSync('players.json')) players = fs.readJsonSync('players.json')
 
-// 💾 save
+// 💾 SAVE
 function saveAll() {
   fs.writeJsonSync('brain.json', brain)
   fs.writeJsonSync('players.json', players)
+}
+
+// 🚫 FILTER (no commands)
+function isRealPlayer(user, msg) {
+  if (!user || user === bot.username) return false
+  if (!msg) return false
+  if (msg.startsWith('/')) return false // 🚫 block commands
+
+  const blocked = ['joined','left','discord','lag']
+  return !blocked.some(w => msg.toLowerCase().includes(w))
+}
+
+// 🧠 NORMALIZE
+function normalize(text) {
+  return text.toLowerCase().trim()
+}
+
+// 👤 PLAYER
+function ensurePlayer(user) {
+  if (!players[user]) {
+    players[user] = { msgs: [], friend: null }
+    emotions[user] = "normal"
+    conversations[user] = []
+  }
+}
+
+// 💬 CONTEXT MEMORY
+function addToConversation(user, msg) {
+  conversations[user].push(msg)
+  if (conversations[user].length > 5) conversations[user].shift()
+}
+
+// 😈 EMOTIONS
+function updateEmotion(user, msg) {
+  if (msg.includes('merci')) emotions[user] = "happy"
+  else if (msg.includes('zft')) emotions[user] = "angry"
+  else if (msg.includes('hzint')) emotions[user] = "sad"
+}
+
+// 🤝 FRIEND
+function setFriend(user, name) {
+  players[user].friend = name
+  saveAll()
+}
+
+// 🧠 LEARN
+function learn(msg) {
+  if (!brain.includes(msg)) {
+    brain.push(msg)
+    if (brain.length > 1000) brain.shift()
+    saveAll()
+  }
+}
+
+// 🌐 INTERNET
+async function searchWiki(q) {
+  try {
+    const r = await axios.get(`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(q)}`)
+    return r.data.extract
+  } catch { return null }
+}
+
+// 🤖 LONG HUMAN REPLY
+function humanReply(text, user) {
+  return `${text}
+
+ana kanhder m3ak b7al chi wa7ed 7a9i9i 😎 w kan7اول nfham context ديال الهضرة ديالنا، ila bghiti n3awnk f ay 7aja goli 👍`
+}
+
+// 😈 STYLE
+function style(text, mood) {
+  if (mood === "happy") return text + " 😂"
+  if (mood === "angry") return "safi baraka mn hadchi 😡"
+  if (mood === "sad") return text + " 😢"
+  return text + " 😎"
+}
+
+// 🤖 AI CONTEXT
+async function smartAI(user, msg) {
+
+  let mood = emotions[user] || "normal"
+  let context = conversations[user].join(' ')
+
+  // 🤝 friend
+  if (msg.startsWith('sahbi')) {
+    let f = msg.split(' ')[1]
+    if (f) {
+      setFriend(user, f)
+      return style(`safi ${f} wla sahbek daba`, mood)
+    }
+  }
+
+  if (msg.includes('chkoun sahbi')) {
+    let f = players[user].friend
+    return f ? style(`sahbek هو ${f}`, mood) : style(`mazal ma3ndk sahb`, mood)
+  }
+
+  // 🌐 internet
+  if (msg.startsWith('chno')) {
+    const info = await searchWiki(msg.replace('chno',''))
+    if (info) return style(humanReply(info.slice(0,150), user), mood)
+  }
+
+  // 🧠 CONTEXT فهم
+  if (context.includes('kidayr') && msg.includes('labas')) {
+    return style(humanReply("zwin! far7tini daba 😎", user), mood)
+  }
+
+  // 🧠 similarity
+  if (brain.length > 10) {
+    const res = similarity.findBestMatch(msg, brain)
+    if (res.bestMatch.rating > 0.55) {
+      return style(humanReply(res.bestMatch.target, user), mood)
+    }
+  }
+
+  // 💬 base
+  if (msg.includes('salam')) return style(humanReply(`salam ${user} kif dayr?`, user), mood)
+
+  return style(humanReply(randomTalk(user), user), mood)
+}
+
+// 💬 RANDOM
+function randomTalk(user) {
+  const arr = [
+    `kidayr ${user}?`,
+    `wach kolchi mzyan؟`,
+    `ana hna m3ak`,
+    `kanfham chwiya chwiya 😂`
+  ]
+  return arr[Math.floor(Math.random()*arr.length)]
+}
+
+// 🚫 ANTI SPAM
+function sendMessage(msg) {
+  if (msg.startsWith('/')) return // 🚫 double protection
+
+  const now = Date.now()
+  if (now - lastMessageTime < 3500) return
+
+  bot.chat(msg)
+  lastMessageTime = now
+}
+
+// 📢 SYSTEM
+function systems() {
+  setInterval(() => {
+    sendMessage("mar7ba bik f server 🇲🇦")
+  }, 90000)
 }
 
 // 🤖 BOT
@@ -47,9 +195,9 @@ function createBot() {
 
     msg = normalize(msg)
 
-    updateEmotion(user, msg)
+    addToConversation(user, msg) // 🧠 context
 
-    rememberMessage(user, msg)
+    updateEmotion(user, msg)
     learn(msg)
 
     const reply = await smartAI(user, msg)
@@ -61,107 +209,3 @@ function createBot() {
 }
 
 createBot()
-
-// 🧠 normalize
-function normalize(text) {
-  return text.toLowerCase()
-}
-
-// 👤 player
-function ensurePlayer(user) {
-  if (!players[user]) {
-    players[user] = { msgs: [], lastSeen: Date.now() }
-    emotions[user] = "normal"
-  }
-}
-
-// 😈 emotions system
-function updateEmotion(user, msg) {
-  if (msg.includes('3afak') || msg.includes('merci')) {
-    emotions[user] = "happy"
-  } else if (msg.includes('khayb') || msg.includes('zft')) {
-    emotions[user] = "angry"
-  } else if (msg.includes('hzint') || msg.includes('machi mzyan')) {
-    emotions[user] = "sad"
-  }
-}
-
-// 🧠 learn
-function learn(msg) {
-  if (!brain.includes(msg)) {
-    brain.push(msg)
-    if (brain.length > 1000) brain.shift()
-    saveAll()
-  }
-}
-
-// 🌐 internet
-async function searchWiki(q) {
-  try {
-    const r = await axios.get(`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(q)}`)
-    return r.data.extract
-  } catch { return null }
-}
-
-// 🤖 AI
-async function smartAI(user, msg) {
-
-  let mood = emotions[user] || "normal"
-
-  // 👑 owner
-  if (user === OWNER) return style(`ana dayman m3ak a malik 👑`, mood)
-
-  // 🌐 internet
-  if (msg.startsWith('chno')) {
-    const info = await searchWiki(msg.replace('chno',''))
-    if (info) return style(info.slice(0,120), mood)
-  }
-
-  // 🧠 similarity
-  if (brain.length > 10) {
-    const res = similarity.findBestMatch(msg, brain)
-    if (res.bestMatch.rating > 0.55) {
-      return style(res.bestMatch.target, mood)
-    }
-  }
-
-  // 💬 base replies
-  if (msg.includes('salam')) return style(`salam ${user} kif dayr?`, mood)
-  if (msg.includes('labas')) return style(`labas 3lik l7amdolah`, mood)
-
-  return style(randomTalk(user), mood)
-}
-
-// 😈 style حسب mood
-function style(text, mood) {
-  if (mood === "happy") return text + " 😂🔥"
-  if (mood === "angry") return "safi baraka mn tkhbi9 😡"
-  if (mood === "sad") return text + " 😢"
-  return text + " 😎"
-}
-
-// 💬 fallback
-function randomTalk(user) {
-  const arr = [
-    `kidayr ${user}?`,
-    `wach kolchi mzyan؟`,
-    `ana hna m3ak 😂`,
-    `ila bghiti chi haja golha`
-  ]
-  return arr[Math.floor(Math.random()*arr.length)]
-}
-
-// 🚫 anti spam
-function sendMessage(msg) {
-  const now = Date.now()
-  if (now - lastMessageTime < 3500) return
-  bot.chat(msg)
-  lastMessageTime = now
-}
-
-// 📢 system
-function systems() {
-  setInterval(() => {
-    sendMessage("§6ANIMONI » mar7ba bik 🇲🇦")
-  }, 90000)
-}
