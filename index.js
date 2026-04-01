@@ -13,7 +13,14 @@ let lastMessageTime = 0
 
 // 📂 LOAD
 if (fs.existsSync('brain.json')) brain = fs.readJsonSync('brain.json')
-if (fs.existsSync('players.json')) players = fs.readJsonSync('players.json')
+if (fs.existsSync('players.json')) {
+  players = fs.readJsonSync('players.json')
+  // restore conversations for existing players
+  for (let user in players) {
+    conversations[user] = []
+    emotions[user] = "normal"
+  }
+}
 
 // 💾 SAVE
 function saveAll() {
@@ -42,17 +49,22 @@ function ensurePlayer(user) {
     players[user] = { msgs: [], friend: null }
     emotions[user] = "normal"
     conversations[user] = []
+  } else {
+    if (!emotions[user]) emotions[user] = "normal"
+    if (!conversations[user]) conversations[user] = []
   }
 }
 
 // 💬 CONTEXT MEMORY
 function addToConversation(user, msg) {
+  ensurePlayer(user) // ← ضمان وجود المصفوفة قبل الإضافة
   conversations[user].push(msg)
   if (conversations[user].length > 5) conversations[user].shift()
 }
 
 // 😈 EMOTIONS
 function updateEmotion(user, msg) {
+  ensurePlayer(user)
   if (msg.includes('merci')) emotions[user] = "happy"
   else if (msg.includes('zft')) emotions[user] = "angry"
   else if (msg.includes('hzint')) emotions[user] = "sad"
@@ -60,6 +72,7 @@ function updateEmotion(user, msg) {
 
 // 🤝 FRIEND
 function setFriend(user, name) {
+  ensurePlayer(user)
   players[user].friend = name
   saveAll()
 }
@@ -98,6 +111,7 @@ function style(text, mood) {
 
 // 🤖 AI CONTEXT
 async function smartAI(user, msg) {
+  ensurePlayer(user)
 
   let mood = emotions[user] || "normal"
   let context = conversations[user].join(' ')
@@ -196,7 +210,6 @@ function createBot() {
     msg = normalize(msg)
 
     addToConversation(user, msg) // 🧠 context
-
     updateEmotion(user, msg)
     learn(msg)
 
