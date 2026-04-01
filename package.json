@@ -1,6 +1,6 @@
 {
   "name": "animoni-ai-bot",
-  "version": "6.0.0",
+  "version": "11.0.0",
   "main": "index.js",
   "scripts": {
     "start": "node index.js"
@@ -8,6 +8,9 @@
   "dependencies": {
     "mineflayer": "^4.0.0",
     "mineflayer-pathfinder": "^2.4.5",
-    "minecraft-data": "^3.0.0"
+    "minecraft-data": "^3.0.0",
+    "fs-extra": "^11.0.0",
+    "string-similarity": "^4.0.4",
+    "axios": "^1.6.0"
   }
 }
