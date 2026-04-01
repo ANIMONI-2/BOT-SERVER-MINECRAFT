@@ -1,24 +1,32 @@
 const mineflayer = require('mineflayer')
 const { pathfinder, Movements, goals } = require('mineflayer-pathfinder')
-const net = require('net')
+const fs = require('fs-extra')
+const similarity = require('string-similarity')
+const axios = require('axios')
 
 const OWNER = "ANIMONI"
-const SERVER_HOST = 'ANIMONI.aternos.me'
-const SERVER_PORT = 59644
 
-let bot = null
-let memory = {}
+let bot
+let brain = []
+let players = {}
+let emotions = {} // 😈 لكل لاعب mood
 let lastMessageTime = 0
-let reconnectInterval = null
-let reconnecting = false
 
+// 📂 load
+if (fs.existsSync('brain.json')) brain = fs.readJsonSync('brain.json')
+if (fs.existsSync('players.json')) players = fs.readJsonSync('players.json')
+
+// 💾 save
+function saveAll() {
+  fs.writeJsonSync('brain.json', brain)
+  fs.writeJsonSync('players.json', players)
+}
+
+// 🤖 BOT
 function createBot() {
-  if (bot) return
-  reconnecting = false
-
   bot = mineflayer.createBot({
-    host: SERVER_HOST,
-    port: SERVER_PORT,
+    host: 'ANIMONI.aternos.me',
+    port: 59644,
     username: 'ANIMONIBOT',
     version: '1.12.2'
   })
@@ -32,196 +40,128 @@ function createBot() {
     systems()
   })
 
-  bot.on('chat', (user, msg) => {
-    if (user === bot.username) return
-    ensureMemory(user)
+  bot.on('chat', async (user, msg) => {
+    if (!isRealPlayer(user, msg)) return
 
-    if (msg.toLowerCase().includes(OWNER.toLowerCase()) && user !== OWNER) {
-      sendMessage(`7tarm ${OWNER} a ${user} 👑`)
-    }
+    ensurePlayer(user)
 
-    updateMood(user, msg)
-    const reply = smartAI(user, msg)
+    msg = normalize(msg)
+
+    updateEmotion(user, msg)
+
+    rememberMessage(user, msg)
+    learn(msg)
+
+    const reply = await smartAI(user, msg)
+
     if (reply) sendMessage(reply)
-    addFriendship(user, 5)
   })
 
-  bot.on('playerJoined', (player) => {
-    if (player.username === bot.username) return
-    ensureMemory(player.username)
-
-    setTimeout(() => {
-      sendMessage(getWelcome(player.username))
-      goToPlayer(player.username) // تابع اللاعب بعد التأكد entity
-    }, 3000)
-  })
-
-  bot.on('death', () => bot.emit('respawn'))
-
-  bot.on('error', (err) => {
-    console.log('❌ BOT ERROR:', err.message)
-    stopBotAndReconnect()
-  })
-
-  bot.on('kicked', (reason) => {
-    console.log('❌ BOT KICKED:', JSON.stringify(reason))
-    stopBotAndReconnect()
-  })
-
-  bot.on('end', () => {
-    console.log('⚠️ BOT DISCONNECTED')
-    stopBotAndReconnect()
-  })
+  bot.on('end', () => setTimeout(createBot, 5000))
 }
 
-// Stop bot and reconnect
-function stopBotAndReconnect() {
-  if (reconnecting) return
-  reconnecting = true
+createBot()
 
-  try { if (bot) bot.quit() } catch {}
-  bot = null
-
-  if (reconnectInterval) clearInterval(reconnectInterval)
-
-  reconnectInterval = setInterval(() => {
-    checkServerOnline(SERVER_HOST, SERVER_PORT, (online) => {
-      if (online) {
-        console.log('🔄 SERVER ONLINE! Reconnecting bot in 10s...')
-        clearInterval(reconnectInterval)
-        reconnectInterval = null
-        setTimeout(createBot, 10000) // تأخير 10 ثواني قبل reconnect
-      } else {
-        console.log('⏳ SERVER OFFLINE. Waiting...')
-      }
-    })
-  }, 5000)
+// 🧠 normalize
+function normalize(text) {
+  return text.toLowerCase()
 }
 
-// Ping TCP
-function checkServerOnline(host, port, callback) {
-  const socket = new net.Socket()
-  let called = false
-  socket.setTimeout(2000)
-  socket.on('connect', () => { called = true; socket.destroy(); callback(true) })
-  socket.on('timeout', () => { if(!called){called=true; socket.destroy(); callback(false)} })
-  socket.on('error', () => { if(!called){called=true; socket.destroy(); callback(false)} })
-  socket.connect(port, host)
-}
-
-// MEMORY
-function ensureMemory(user) {
-  if (!memory[user]) {
-    memory[user] = { msgs: 0, friendship: user===OWNER?100:0, mood:'normal' }
+// 👤 player
+function ensurePlayer(user) {
+  if (!players[user]) {
+    players[user] = { msgs: [], lastSeen: Date.now() }
+    emotions[user] = "normal"
   }
-  memory[user].msgs++
 }
 
-function addFriendship(user, amount) {
-  ensureMemory(user)
-  memory[user].friendship += amount
-  if (memory[user].friendship>100) memory[user].friendship=100
-  if (memory[user].friendship<0) memory[user].friendship=0
+// 😈 emotions system
+function updateEmotion(user, msg) {
+  if (msg.includes('3afak') || msg.includes('merci')) {
+    emotions[user] = "happy"
+  } else if (msg.includes('khayb') || msg.includes('zft')) {
+    emotions[user] = "angry"
+  } else if (msg.includes('hzint') || msg.includes('machi mzyan')) {
+    emotions[user] = "sad"
+  }
 }
 
-function getLevel(user) {
-  ensureMemory(user)
-  const f = memory[user].friendship
-  if(f<20) return 'stranger'
-  if(f<50) return 'normal'
-  if(f<80) return 'friend'
-  return 'bestie'
+// 🧠 learn
+function learn(msg) {
+  if (!brain.includes(msg)) {
+    brain.push(msg)
+    if (brain.length > 1000) brain.shift()
+    saveAll()
+  }
 }
 
-// MOOD
-function updateMood(user,msg) {
-  ensureMemory(user)
-  msg = msg.toLowerCase()
-  if(msg.includes('noob')||msg.includes('stupid')) { memory[user].mood='angry'; addFriendship(user,-5) }
-  else if(msg.includes('sahbi')||msg.includes('zwin')) { memory[user].mood='happy'; addFriendship(user,10) }
-  else { memory[user].mood='normal' }
+// 🌐 internet
+async function searchWiki(q) {
+  try {
+    const r = await axios.get(`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(q)}`)
+    return r.data.extract
+  } catch { return null }
 }
 
-// AI
-function smartAI(user,msg) {
-  ensureMemory(user)
-  msg = removeIllegalChars(msg)
-  if(user===OWNER) return [`wa malik ${user} 👑`, `ana m3ak a ${user}`, `nta boss 🔥`, `amrni`, `kolchi mzyan`][rand(0,5)]
-  const level = getLevel(user)
-  const mood = memory[user].mood
-  if(mood==='angry') return [`sir b3d mni ${user}`, `hder b7ya`, `ma3jbnich had lhdra`, `khalli ljo zwin`][rand(0,4)]
-  if(mood==='happy') return [`wa sahbi ${user} 😂`, `nta wa3er`, `kan7b lhdra m3ak`, `nta zwin`][rand(0,4)]
-  if(msg.includes('salam')||msg.includes('hi')) return `salam ${user} 👋`
-  if(msg.includes('fin')) return `ana f lobby 😎`
-  if(level==='stranger') return `wach smitk ${user}?`
-  if(level==='normal') return `kidayr ${user}?`
-  if(level==='friend') return `nta sahbi ${user}`
-  return `nta khoya ${user} ❤️`
+// 🤖 AI
+async function smartAI(user, msg) {
+
+  let mood = emotions[user] || "normal"
+
+  // 👑 owner
+  if (user === OWNER) return style(`ana dayman m3ak a malik 👑`, mood)
+
+  // 🌐 internet
+  if (msg.startsWith('chno')) {
+    const info = await searchWiki(msg.replace('chno',''))
+    if (info) return style(info.slice(0,120), mood)
+  }
+
+  // 🧠 similarity
+  if (brain.length > 10) {
+    const res = similarity.findBestMatch(msg, brain)
+    if (res.bestMatch.rating > 0.55) {
+      return style(res.bestMatch.target, mood)
+    }
+  }
+
+  // 💬 base replies
+  if (msg.includes('salam')) return style(`salam ${user} kif dayr?`, mood)
+  if (msg.includes('labas')) return style(`labas 3lik l7amdolah`, mood)
+
+  return style(randomTalk(user), mood)
 }
 
-function removeIllegalChars(str) {
-  return str.replace(/[^ -~]+/g, '') // يحيد أي حرف غير ASCII صالح
+// 😈 style حسب mood
+function style(text, mood) {
+  if (mood === "happy") return text + " 😂🔥"
+  if (mood === "angry") return "safi baraka mn tkhbi9 😡"
+  if (mood === "sad") return text + " 😢"
+  return text + " 😎"
 }
 
-// Welcome
-function getWelcome(user) { return user===OWNER?`mar7ba malik ${user} 👑`:`mar7ba ${user} 👋` }
+// 💬 fallback
+function randomTalk(user) {
+  const arr = [
+    `kidayr ${user}?`,
+    `wach kolchi mzyan؟`,
+    `ana hna m3ak 😂`,
+    `ila bghiti chi haja golha`
+  ]
+  return arr[Math.floor(Math.random()*arr.length)]
+}
 
-// Anti Spam
+// 🚫 anti spam
 function sendMessage(msg) {
   const now = Date.now()
-  if(now-lastMessageTime<4000) return
-  if(bot) bot.chat(removeIllegalChars(msg))
-  lastMessageTime=now
+  if (now - lastMessageTime < 3500) return
+  bot.chat(msg)
+  lastMessageTime = now
 }
 
-// Follow with retry
-function goToPlayer(username) {
-  const attemptFollow = () => {
-    const target = bot.players[username]
-    if (!target || !target.entity || !bot.entity) {
-      setTimeout(attemptFollow, 1000)
-      return
-    }
-    const level = getLevel(username)
-    if (level === 'friend' || level === 'bestie' || username === OWNER) {
-      const goal = new goals.GoalFollow(target.entity, 2)
-      bot.pathfinder.setGoal(goal, true)
-      setTimeout(() => bot.pathfinder.setGoal(null), 8000)
-    }
-  }
-  attemptFollow()
-}
-
-// Favorite
-function getFavorite() {
-  let best=OWNER, max=-1
-  for(let p in memory) if(memory[p].friendship>max){max=memory[p].friendship;best=p}
-  return best
-}
-
-// Systems + Announcements
+// 📢 system
 function systems() {
-  const announcements = [
-    "§6ANIMONI » mar7ba bikom f server 🇲🇦🔥",
-    "§bTIP » dir /lobby bach ترجع lobby",
-    "§aCOMMAND » dir /spawn bach ترجع spawn",
-    "§dFEATURE » 3andna night vision dayma 🌙",
-    "§6INFO » IP dyal server: ANIMONI.aternos.me",
-    "§cRULE » mamnou3 hacks w spam 🚫",
-    "§eTIP » dir /tpa bach tmchi 3nd s7abk",
-    "§aECONOMY » dir /pay bach tsift flos",
-    "§bHOME » dir /sethome w /home",
-    "§dGAMES » skywars mawjouda ☁️"
-  ]
-  let i=0
-  setInterval(()=>{sendMessage(announcements[i]); i++; if(i>=announcements.length)i=0},60000)
-  setInterval(()=>{const fav=getFavorite(); if(fav)sendMessage(`fin ghabrti ${fav} 😂`)},40000)
-  setInterval(()=>{if(Math.random()<0.3){bot.setControlState('jump',true); setTimeout(()=>bot.setControlState('jump',false),300)}},9000)
-  setInterval(()=>{bot.look(Math.random()*Math.PI*2,(Math.random()-0.5)*Math.PI,true)},5000)
+  setInterval(() => {
+    sendMessage("§6ANIMONI » mar7ba bik 🇲🇦")
+  }, 90000)
 }
-
-// Random
-function rand(min,max){return Math.floor(Math.random()*(max-min)+min)}
-
-// START
-checkServerOnline(SERVER_HOST, SERVER_PORT, (online)=>{ if(online) createBot(); else stopBotAndReconnect() })
