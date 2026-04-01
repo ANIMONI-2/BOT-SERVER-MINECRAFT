@@ -85,7 +85,7 @@ async function searchWiki(q) {
 function humanReply(text, user) {
   return `${text}
 
-ana kanhder m3ak b7al chi wa7ed 7a9i9i 😎 w kan7اول nfham context ديال الهضرة ديالنا، ila bghiti n3awnk f ay 7aja goli 👍`
+ana kanhder m3ak b7al chi wa7ed 7a9i9i 😎 w kan7اawl nfham context dyal lhdra dyalna، ila bghiti n3awnk f ay 7aja goli 👍`
 }
 
 // 😈 STYLE
@@ -166,7 +166,7 @@ function sendMessage(msg) {
 // 📢 SYSTEM
 function systems() {
   setInterval(() => {
-    sendMessage("mar7ba bik f server 🇲🇦")
+    sendMessage("mar7ba bik f server ")
   }, 90000)
 }
 
