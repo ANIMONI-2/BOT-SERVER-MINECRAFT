@@ -130,10 +130,10 @@ function smartReply(user, msg) {
   // 💬 intelligent replies
   const replies = [
     `hmm fhemtk walakin khasni tafasil ktar`,
-    `wach kat9sed chi 7aja معينة؟`,
+    `wach kat9sed chi 7aja mo3ayana?؟`,
     `kayban liya hadchi mzyan walakin mumkin n7sno`,
-    `3tini details bach nfhamك ktar`,
-    `ana kan7awl nfhamك b7al chi insan 7a9i9i 😈`
+    `3tini details bach nfhamk ktar`,
+    `ana kan7awl nfhamk b7al chi insan 7a9i9i 😈`
   ]
 
   return style(replies[Math.floor(Math.random()*replies.length)], mood, user)
