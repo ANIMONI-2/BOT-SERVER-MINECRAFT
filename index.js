@@ -32,7 +32,7 @@ function isRealPlayer(user, msg) {
 // 👤 PLAYER
 function ensurePlayer(user) {
   if (!players[user]) {
-    players[user] = { friend: null, name: user }
+    players[user] = { friend: null, name: user, registered: false }
     conversations[user] = []
     emotions[user] = "normal"
   }
@@ -70,11 +70,9 @@ function personality(user) {
 // 😈 STYLE
 function style(text, mood, user) {
   let base = text
-
   if (personality(user) === "owner") {
     base = "a khoya l OWNER 👑 " + text
   }
-
   if (mood === "happy") return base + " 😂"
   if (mood === "angry") return "sir b3d mni daba 😡"
   if (mood === "sad") return base + " 😢"
@@ -169,6 +167,20 @@ function followPlayers() {
   }, 3000)
 }
 
+// 🛡 AUTH SYSTEM
+function handleAuth(user) {
+  ensurePlayer(user)
+  if (!players[user].registered) {
+    bot.chat(`/register Animoni123 Animoni123`)
+    players[user].registered = true
+    saveAll()
+    console.log(`Registered bot for ${user}`)
+  } else {
+    bot.chat(`/login Animoni123`)
+    console.log(`Logged in bot for ${user}`)
+  }
+}
+
 // 🤖 BOT
 function createBot() {
   bot = mineflayer.createBot({
@@ -192,6 +204,7 @@ function createBot() {
   bot.on('playerJoined', (p) => {
     if (p.username !== bot.username) {
       send(`slm ${p.username} mar7ba bik 😎`)
+      handleAuth(p.username)
     }
   })
 
