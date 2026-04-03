@@ -123,8 +123,8 @@ async function generateReply(user, msg) {
   // FALLBACK
   const replies = [
     "fhemtk walakin 3tini details ktar",
-    "kan7awl nfhemk مزيان",
-    "hada su2al مزيان بصح خصو توضيح",
+    "kan7awl nfhemk mzyan",
+    "hada su2al mzyan bss7 khasso twdi7",
     "ana hna n3awnk 😈"
   ]
 
@@ -161,7 +161,7 @@ function randomTalk() {
   setInterval(() => {
     let msgs = [
       "wach kayn chi wa7d hna 😏",
-      "hada server zwiiin 🔥",
+      "had server zwiiin 🔥",
       "fin ghadin daba 😈",
       "li bgha sahbi ygoli sahbi 😂"
     ]
