@@ -124,7 +124,7 @@ async function generateReply(user, msg) {
   const replies = [
     "fhemtk walakin 3tini details ktar",
     "kan7awl nfhemk mzyan",
-    "hada su2al mzyan bss7 khasso twdi7",
+    "had su2al mzyan bss7 khasso twdi7",
     "ana hna n3awnk 😈"
   ]
 
