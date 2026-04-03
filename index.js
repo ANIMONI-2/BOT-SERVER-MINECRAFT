@@ -2,144 +2,139 @@ const mineflayer = require('mineflayer')
 const { pathfinder, Movements, goals } = require('mineflayer-pathfinder')
 const fs = require('fs-extra')
 const similarity = require('string-similarity')
+const axios = require('axios')
 
 let bot
 let brain = []
 let players = {}
 let conversations = {}
 let emotions = {}
+let reputation = {}
+
 let lastMessage = ""
 let lastTime = 0
 
-// 📂 LOAD
+// LOAD
 if (fs.existsSync('brain.json')) brain = fs.readJsonSync('brain.json')
 if (fs.existsSync('players.json')) players = fs.readJsonSync('players.json')
 
-// 💾 SAVE
+// SAVE
 function saveAll() {
   fs.writeJsonSync('brain.json', brain)
   fs.writeJsonSync('players.json', players)
 }
 
-// 🚫 FILTER
+// FILTER
 function isRealPlayer(user, msg) {
   if (!user || user === bot.username) return false
-  if (!msg) return false
-  if (msg.startsWith('/')) return false
+  if (!msg || msg.startsWith('/')) return false
   return true
 }
 
-// 👤 PLAYER
+// PLAYER INIT
 function ensurePlayer(user) {
   if (!players[user]) {
-    players[user] = { friend: null, name: user, registered: false }
+    players[user] = { friend: null }
     conversations[user] = []
     emotions[user] = "normal"
+    reputation[user] = 0
   }
 }
 
-// 🧠 MEMORY
+// MEMORY
 function addMemory(user, msg) {
-  ensurePlayer(user)
   conversations[user].push(msg)
-  if (conversations[user].length > 12) conversations[user].shift()
+  if (conversations[user].length > 25) conversations[user].shift()
 }
 
-// 😈 EMOTION
+// EMOTION
 function updateEmotion(user, msg) {
   if (msg.includes('merci') || msg.includes('chokran')) emotions[user] = "happy"
-  else if (msg.includes('z3f') || msg.includes('skot')) emotions[user] = "angry"
-  else if (msg.includes('hzint')) emotions[user] = "sad"
+  else if (msg.includes('sir') || msg.includes('skot')) emotions[user] = "angry"
+  else emotions[user] = "normal"
 }
 
-// 🧠 LEARN
+// REPUTATION
+function updateReputation(user, msg) {
+  if (msg.includes('merci') || msg.includes('3afak')) reputation[user] += 1
+  if (msg.includes('hmar') || msg.includes('skot')) reputation[user] -= 2
+}
+
+// LEARN
 function learn(msg) {
-  if (!brain.includes(msg)) {
+  if (!brain.includes(msg) && msg.length > 4) {
     brain.push(msg)
-    if (brain.length > 2000) brain.shift()
+    if (brain.length > 3000) brain.shift()
     saveAll()
   }
 }
 
-// 🎭 PERSONALITY
-function personality(user) {
-  if (user === "ANIMONI") return "owner"
-  return "normal"
+// STYLE
+function style(text, user) {
+  let mood = emotions[user]
+
+  if (user === "ANIMONI") text = "a OWNER 👑 " + text
+
+  if (reputation[user] < -3) return "sir b3d mni 😡"
+  if (mood === "happy") return text + " 😂"
+  if (mood === "angry") return "sir b3d mni chwya 😡"
+  return text + " 😎"
 }
 
-// 😈 STYLE
-function style(text, mood, user) {
-  let base = text
-  if (personality(user) === "owner") {
-    base = "a khoya l OWNER 👑 " + text
+// 🤖 FREE AI
+async function askAI(msg) {
+  try {
+    const res = await axios.get(`https://api.affiliateplus.xyz/api/chatbot?message=${encodeURIComponent(msg)}&botname=Animoni&ownername=ANIMONI`)
+    return res.data.message
+  } catch {
+    return null
   }
-  if (mood === "happy") return base + " 😂"
-  if (mood === "angry") return "sir b3d mni daba 😡"
-  if (mood === "sad") return base + " 😢"
-  return base + " 😎"
 }
 
-// 🤖 AI CORE
-function smartReply(user, msg) {
-  let mood = emotions[user] || "normal"
-  let context = conversations[user].join(" ")
+// 🧠 GENERATE
+async function generateReply(user, msg) {
 
-  // 🤝 friend system
+  // FRIEND SYSTEM
   if (msg.startsWith("sahbi")) {
     let f = msg.split(" ")[1]
     if (f) {
       players[user].friend = f
       saveAll()
-      return style(`safi ${f} wla sahbek daba`, mood, user)
+      return style(`safi ${f} wla sahbek daba`, user)
     }
   }
 
   if (msg.includes("chkoun sahbi")) {
-    let f = players[user].friend
-    return f ? `sahbek howa ${f}` : `mazal ma3ndk sahb`
+    return style(players[user].friend || "mazal ma3ndk sahb", user)
   }
 
-  // 🧠 context real
-  if (msg.includes("kidayr")) {
-    return style(`labas 3lik nta ${user}? ana mzyan daba`, mood, user)
+  // ROLEPLAY
+  let entity = bot.players[user]?.entity
+  if (entity) {
+    let dist = bot.entity.position.distanceTo(entity.position)
+    if (dist < 3) return style(`kanchofk 9rib lya 😂`, user)
+    if (dist < 10) return style(`rak 9rib chwya`, user)
   }
 
-  if (msg.includes("chno ndir")) {
-    return style(`chouf 7awl t9oliya chno wa9e3 m3ak w ana n3tik solution mzyan`, mood, user)
-  }
+  // AI
+  let ai = await askAI(msg)
+  if (ai) return style(ai, user)
 
-  if (msg.includes("fin")) {
-    return style(`ana hna f lobby kan7ark m3a players 😂`, mood, user)
-  }
-
-  // 👀 observation
-  if (Math.random() < 0.2) {
-    return style(`kanchof players kaydoro hna 😂 nta wach katl3ab wla katfakar؟`, mood, user)
-  }
-
-  // 🧠 similarity
-  if (brain.length > 30) {
-    const res = similarity.findBestMatch(msg, brain)
-    if (res.bestMatch.rating > 0.65) {
-      return style(res.bestMatch.target, mood, user)
-    }
-  }
-
-  // 💬 intelligent replies
+  // FALLBACK
   const replies = [
-    `hmm fhemtk walakin khasni tafasil ktar`,
-    `wach kat9sed chi 7aja mo3ayana?؟`,
-    `kayban liya hadchi mzyan walakin mumkin n7sno`,
-    `3tini details bach nfhamk ktar`,
-    `ana kan7awl nfhamk b7al chi insan 7a9i9i 😈`
+    "fhemtk walakin 3tini details ktar",
+    "kan7awl nfhemk مزيان",
+    "hada su2al مزيان بصح خصو توضيح",
+    "ana hna n3awnk 😈"
   ]
 
-  return style(replies[Math.floor(Math.random()*replies.length)], mood, user)
+  return style(replies[Math.floor(Math.random()*replies.length)], user)
 }
 
-// 🚫 ANTI SPAM
+// SEND
 function send(msg) {
   if (!msg || msg === lastMessage) return
+
   const now = Date.now()
   if (now - lastTime < 2500) return
 
@@ -148,40 +143,60 @@ function send(msg) {
   lastTime = now
 }
 
-// 👀 FOLLOW + LOOK
-function followPlayers() {
+// FOLLOW
+function follow() {
   setInterval(() => {
-    const list = Object.keys(bot.players).filter(p => p !== bot.username)
-    if (list.length === 0) return
+    let list = Object.values(bot.players).filter(p => p.entity)
+    if (!list.length) return
 
-    const targetName = list[Math.floor(Math.random()*list.length)]
-    const target = bot.players[targetName]
+    let target = list[Math.floor(Math.random()*list.length)]
 
-    if (!target || !target.entity) return
+    bot.lookAt(target.entity.position.offset(0,1.6,0))
+    bot.pathfinder.setGoal(new goals.GoalFollow(target.entity, 2), true)
+  }, 4000)
+}
 
-    bot.lookAt(target.entity.position.offset(0, 1.6, 0))
+// RANDOM TALK
+function randomTalk() {
+  setInterval(() => {
+    let msgs = [
+      "wach kayn chi wa7d hna 😏",
+      "hada server zwiiin 🔥",
+      "fin ghadin daba 😈",
+      "li bgha sahbi ygoli sahbi 😂"
+    ]
+    send(msgs[Math.floor(Math.random()*msgs.length)])
+  }, 30000)
+}
 
-    const GoalFollow = goals.GoalFollow
-    bot.pathfinder.setGoal(new GoalFollow(target.entity, 2), true)
+// 🔐 AUTH (Register + Login)
+function handleAuth() {
+  setTimeout(() => {
+    bot.chat('/register Animoni123 Animoni123')
+
+    setTimeout(() => {
+      bot.chat('/login Animoni123')
+    }, 2000)
 
   }, 3000)
 }
 
-// 🛡 AUTH SYSTEM
-function handleAuth(user) {
-  ensurePlayer(user)
-  if (!players[user].registered) {
-    bot.chat(`/register Animoni123 Animoni123`)
-    players[user].registered = true
-    saveAll()
-    console.log(`Registered bot for ${user}`)
-  } else {
-    bot.chat(`/login Animoni123`)
-    console.log(`Logged in bot for ${user}`)
-  }
+// 🔐 Detect AuthMe messages
+function autoAuthDetect() {
+  bot.on('messagestr', (msg) => {
+    let m = msg.toLowerCase()
+
+    if (m.includes('register')) {
+      bot.chat('/register Animoni123 Animoni123')
+    }
+
+    if (m.includes('login')) {
+      bot.chat('/login Animoni123')
+    }
+  })
 }
 
-// 🤖 BOT
+// BOT
 function createBot() {
   bot = mineflayer.createBot({
     host: 'ANIMONI.aternos.me',
@@ -193,40 +208,31 @@ function createBot() {
   bot.loadPlugin(pathfinder)
 
   bot.once('spawn', () => {
-    console.log("BOT CONNECTED 😈")
     const mcData = require('minecraft-data')(bot.version)
     bot.pathfinder.setMovements(new Movements(bot, mcData))
 
-    followPlayers()
+    handleAuth()
+    autoAuthDetect()
+
+    follow()
+    randomTalk()
   })
 
-  // 👋 JOIN
-  bot.on('playerJoined', (p) => {
-    if (p.username !== bot.username) {
-      send(`slm ${p.username} mar7ba bik 😎`)
-      handleAuth(p.username)
-    }
-  })
-
-  // 💬 CHAT
-  bot.on('chat', (user, msg) => {
+  bot.on('chat', async (user, msg) => {
     if (!isRealPlayer(user, msg)) return
 
     ensurePlayer(user)
 
     msg = msg.toLowerCase()
 
-    if (msg === lastMessage) return
-
     addMemory(user, msg)
     updateEmotion(user, msg)
+    updateReputation(user, msg)
     learn(msg)
 
-    const reply = smartReply(user, msg)
+    let reply = await generateReply(user, msg)
 
-    if (reply && reply !== msg) {
-      send(reply)
-    }
+    if (reply && reply !== msg) send(reply)
   })
 
   bot.on('end', () => setTimeout(createBot, 5000))
