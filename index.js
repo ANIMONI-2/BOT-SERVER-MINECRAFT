@@ -16,7 +16,15 @@ let lastTime = 0
 
 // LOAD
 if (fs.existsSync('brain.json')) brain = fs.readJsonSync('brain.json')
-if (fs.existsSync('players.json')) players = fs.readJsonSync('players.json')
+if (fs.existsSync('players.json')) {
+  players = fs.readJsonSync('players.json')
+  // restore conversations, emotions, reputation for existing players
+  for (let user in players) {
+    conversations[user] = []
+    emotions[user] = "normal"
+    reputation[user] = reputation[user] || 0
+  }
+}
 
 // SAVE
 function saveAll() {
@@ -33,22 +41,22 @@ function isRealPlayer(user, msg) {
 
 // PLAYER INIT
 function ensurePlayer(user) {
-  if (!players[user]) {
-    players[user] = { friend: null }
-    conversations[user] = []
-    emotions[user] = "normal"
-    reputation[user] = 0
-  }
+  if (!players[user]) players[user] = { friend: null }
+  if (!conversations[user]) conversations[user] = []
+  if (!emotions[user]) emotions[user] = "normal"
+  if (!reputation[user]) reputation[user] = 0
 }
 
 // MEMORY
 function addMemory(user, msg) {
+  ensurePlayer(user) // ← ضمان وجود المصفوفة
   conversations[user].push(msg)
   if (conversations[user].length > 25) conversations[user].shift()
 }
 
 // EMOTION
 function updateEmotion(user, msg) {
+  ensurePlayer(user)
   if (msg.includes('merci') || msg.includes('chokran')) emotions[user] = "happy"
   else if (msg.includes('sir') || msg.includes('skot')) emotions[user] = "angry"
   else emotions[user] = "normal"
@@ -56,6 +64,7 @@ function updateEmotion(user, msg) {
 
 // REPUTATION
 function updateReputation(user, msg) {
+  ensurePlayer(user)
   if (msg.includes('merci') || msg.includes('3afak')) reputation[user] += 1
   if (msg.includes('hmar') || msg.includes('skot')) reputation[user] -= 2
 }
@@ -71,6 +80,7 @@ function learn(msg) {
 
 // STYLE
 function style(text, user) {
+  ensurePlayer(user)
   let mood = emotions[user]
 
   if (user === "ANIMONI") text = "a OWNER 👑 " + text
@@ -93,6 +103,7 @@ async function askAI(msg) {
 
 // 🧠 GENERATE
 async function generateReply(user, msg) {
+  ensurePlayer(user)
 
   // FRIEND SYSTEM
   if (msg.startsWith("sahbi")) {
