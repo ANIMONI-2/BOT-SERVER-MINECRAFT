@@ -105,7 +105,7 @@ async function generateReply(user, msg) {
   if (local) return style(local, user)
 
   if (msg.includes("tree")) {
-    return style("t9dar tksr shajra kamla b axe wahda 🌳", user)
+    return style("t9dar thsr shajra kamla b drba bl axe 🌳", user)
   }
 
   if (msg.includes("iron")) {
@@ -139,7 +139,7 @@ function jailCheck(user) {
 
 // 📢 FEATURES (UPDATED)
 const features = [
-  "t9dar tksr shajra kamla b axe wahda 🌳🔥",
+  "t9dar thsr shajra kamla b drba bl axe 🌳",
   "Vein Mining  kaykhdem m3a ga3 ores (iron, coal, gold, diamond, emerald, redstone, lapis, copper, quartz…) ila hrsty wa7ed b lbikax ga3 li7dah kaythrsso⛏️",
   "ila mati kayban sandou9 dyal items 💀",
   "night vision dyma 🌙",
