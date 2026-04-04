@@ -160,7 +160,7 @@ const rules = [
   "mamnou3 hacks 🚫",
   "mamnou3 l’itiham b batil 🚫",
   "mamnou3 spam 🚫",
-  "respect players 🛡️",
+  "7tarmo b3diyatkom 🛡️",
   "ila khelfti chi 9anon ghadi tmchi l7bs 😈"
 ]
 
@@ -187,7 +187,7 @@ function selfThinking() {
       "had server fih features 9wiya bzaf 😈",
       "tree capitator + vein miner 🔥",
       "ANIMONI howa malik 👑",
-      "ila chi wa7ed ghesh ghadi n3a9bo 🚨"
+      "ila chi wa7ed resh ghadi n3a9bo 🚨"
     ]
     send("🧠 " + thoughts[Math.floor(Math.random()*thoughts.length)])
   }, 40000)
