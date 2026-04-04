@@ -147,6 +147,12 @@ const features = [
   "katban l2i7datiyate 📍",
   "teams kaynin 🤝",
   "one sleep 🌞"
+  "Bash tmchi 3and chi player: /tpa <smiyat l3ab>"
+  "Bash tdir chi player yji 3andk: /tpahere <smiyat l3ab>"
+  "Bash t9bl tpa li tssiftat lik: /tpaccept"
+  "Bash trfd tpa li tssiftat lik: /tpdeny"
+  "Bash trj3 l spawn: /spawn"
+  "Bash trj3 l lobby: /lobby"
 ]
 
 // 📜 RULES
