@@ -67,7 +67,7 @@ function analyze(user, msg) {
 function style(text, user) {
   if (user === "ANIMONI") return "👑 ANIMONI HOWA MALIK 😈🔥"
 
-  if (warnings[user] >= 3) return "🚨 khlfti l9awanin… ghadi tmchi l7بس 😈"
+  if (warnings[user] >= 3) return "🚨 khlfti l9awanin… ghadi tmchi l7bs 😈"
   if (reputation[user] > 8) return "🤝 " + text
   if (reputation[user] < -6) return "😡 sir b3d"
 
@@ -109,7 +109,7 @@ async function generateReply(user, msg) {
   }
 
   if (msg.includes("iron")) {
-    return style("ila kan iron 7dak kaytksro kamlin ⛏️", user)
+    return style("Vein Mining  kaykhdem m3a ga3 ores (iron, coal, gold, diamond, emerald, redstone, lapis, copper, quartz…) ila hrsty wa7ed b lbikax ga3 li7dah kaythrsso⛏️", user)
   }
 
   return style("kanfakar 😈", user)
@@ -131,7 +131,7 @@ function send(msg) {
 // 🚨 JAIL
 function jailCheck(user) {
   if (warnings[user] >= 3) {
-    send(`🚨 ${user} ghadi tmchi l7بس 😈`)
+    send(`🚨 ${user} ghadi tmchi l7bs 😈`)
     warnings[user] = 0
     reputation[user] = -5
   }
@@ -140,11 +140,11 @@ function jailCheck(user) {
 // 📢 FEATURES (UPDATED)
 const features = [
   "t9dar tksr shajra kamla b axe wahda 🌳🔥",
-  "ila ksrti iron w kayn 7dah iron kaytksro kamlin ⛏️",
+  "Vein Mining  kaykhdem m3a ga3 ores (iron, coal, gold, diamond, emerald, redstone, lapis, copper, quartz…) ila hrsty wa7ed b lbikax ga3 li7dah kaythrsso⛏️",
   "ila mati kayban sandou9 dyal items 💀",
   "night vision dyma 🌙",
   "server khdam 24/7 ⏰",
-  "katban coordinates 📍",
+  "katban l2i7datiyate 📍",
   "teams kaynin 🤝",
   "one sleep 🌞"
 ]
@@ -155,7 +155,7 @@ const rules = [
   "mamnou3 l’itiham b batil 🚫",
   "mamnou3 spam 🚫",
   "respect players 🛡️",
-  "ila khelfti chi 9anon ghadi tmchi l7بس 😈"
+  "ila khelfti chi 9anon ghadi tmchi l7bs 😈"
 ]
 
 // SMART ANNOUNCE
@@ -178,7 +178,7 @@ function smartTalk() {
 function selfThinking() {
   setInterval(() => {
     let thoughts = [
-      "had server فيه features قوية بزاف 😈",
+      "had server fih features 9wiya bzaf 😈",
       "tree capitator + vein miner 🔥",
       "ANIMONI howa malik 👑",
       "ila chi wa7ed ghesh ghadi n3a9bo 🚨"
