@@ -1,6 +1,6 @@
 {
-  "name": "animoni-ai-final",
-  "version": "1.0.0",
+  "name": "animoni-singularity-ai",
+  "version": "5.1.0",
   "main": "index.js",
   "scripts": {
     "start": "node index.js"
@@ -8,9 +8,9 @@
   "dependencies": {
     "mineflayer": "^4.20.0",
     "mineflayer-pathfinder": "^2.4.5",
+    "minecraft-data": "^3.60.0",
     "fs-extra": "^11.2.0",
-    "string-similarity": "^4.0.4",
     "axios": "^1.6.7",
-    "minecraft-data": "^3.60.0"
+    "string-similarity": "^4.0.4"
   }
 }
