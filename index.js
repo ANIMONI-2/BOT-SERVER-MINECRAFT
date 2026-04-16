@@ -1,3 +1,5 @@
+process.removeAllListeners('warning')
+
 const mineflayer = require('mineflayer')
 const { pathfinder, Movements, goals } = require('mineflayer-pathfinder')
 const fs = require('fs-extra')
@@ -63,25 +65,30 @@ function analyze(user, msg) {
   }
 }
 
-// STYLE 😈
+// CLEAN TEXT
+function cleanText(text) {
+  return text.replace(/[^\x00-\x7F]/g, "")
+}
+
+// STYLE
 function style(text, user) {
-  if (user === "ANIMONI") return "👑 ANIMONI HOWA MALIK 😈🔥"
+  if (user === "ANIMONI") return "ANIMONI HOWA MALIK"
 
-  if (warnings[user] >= 3) return "🚨 khlfti l9awanin… ghadi tmchi l7bs 😈"
-  if (reputation[user] > 8) return "🤝 " + text
-  if (reputation[user] < -6) return "😡 sir b3d"
+  if (warnings[user] >= 3) return "khlfti l9awanin"
+  if (reputation[user] > 8) return "OK " + text
+  if (reputation[user] < -6) return "sir b3d"
 
-  if (emotions[user] === "happy") return text + " 😂"
-  if (emotions[user] === "angry") return "😡 ma3ajbni hadchi"
+  if (emotions[user] === "happy") return text
+  if (emotions[user] === "angry") return "ma3ajbni hadchi"
 
-  return text + " 😎"
+  return text
 }
 
 // AI
 async function askAI(msg) {
   try {
     const res = await axios.get(`https://api.affiliateplus.xyz/api/chatbot?message=${encodeURIComponent(msg)}`)
-    return res.data.message
+    return cleanText(res.data.message)
   } catch {
     return null
   }
@@ -104,15 +111,10 @@ async function generateReply(user, msg) {
   let local = localAI(msg)
   if (local) return style(local, user)
 
-  if (msg.includes("tree")) {
-    return style("t9dar thsr shajra kamla b drba bl axe 🌳", user)
-  }
+  if (msg.includes("tree")) return style("t9dar thsr shajra kamla b drba bl axe", user)
+  if (msg.includes("iron")) return style("vein mining kaykhdem m3a ores", user)
 
-  if (msg.includes("iron")) {
-    return style("Vein Mining  kaykhdem m3a ga3 ores (iron, coal, gold, diamond, emerald, redstone, lapis, copper, quartz…) ila hrsty wa7ed b lbikax ga3 li7dah kaythrsso⛏️", user)
-  }
-
-  return style("kanfakar 😈", user)
+  return style("kanfakar", user)
 }
 
 // SEND
@@ -120,88 +122,40 @@ function send(msg) {
   if (!msg || msg === lastMessage) return
   if (msg.startsWith('/')) return
 
+  msg = cleanText(msg)
+
   const now = Date.now()
   if (now - lastTime < 2000) return
 
-  bot.chat(msg)
+  if (bot) bot.chat(msg)
+
   lastMessage = msg
   lastTime = now
 }
 
-// 🚨 JAIL
+// JAIL
 function jailCheck(user) {
   if (warnings[user] >= 3) {
-    send(`🚨 ${user} ghadi tmchi l7bs 😈`)
+    send(`${user} ghadi l7bs`)
     warnings[user] = 0
     reputation[user] = -5
   }
 }
 
-// 📢 FEATURES (UPDATED)
-const features = [
-  "t9dar thsr shajra kamla b drba bl axe 🌳",
-  "Vein Mining  kaykhdem m3a ga3 ores (iron, coal, gold, diamond, emerald, redstone, lapis, copper, quartz…) ila hrsty wa7ed b lbikax ga3 li7dah kaythrsso⛏️",
-  "ila mati kayban sandou9 dyal items 💀",
-  "night vision dyma 🌙",
-  "server khdam 24/7 ⏰",
-  "katban l2i7datiyate 📍",
-  "teams kaynin 🤝",
-  "one sleep 🌞",
-  "Bash tmchi 3and chi l3ab: /tpa <smiyat l3ab>",
-  "Bash tdir chi l3ab yji 3andk: /tpahere <smiyat l3ab>",
-  "Bash t9bl tpa li tssiftat lik: /tpaccept",
-  "Bash trfd tpa li tssiftat lik: /tpdeny",
-  "Bash trj3 l spawn: /spawn",
-  "Bash trj3 l lobby: /lobby"
-]
-
-// 📜 RULES
-const rules = [
-  "mamnou3 hacks 🚫",
-  "mamnou3 l’itiham b batil 🚫",
-  "mamnou3 spam 🚫",
-  "7tarmo b3diyatkom 🛡️",
-  "ila khelfti chi 9anon ghadi tmchi l7bs 😈"
-]
-
-// SMART ANNOUNCE
-function smartTalk() {
-  let i = 0
-  let j = 0
-
-  setInterval(() => {
-    if (Math.random() < 0.6) {
-      send("📢 " + features[i])
-      i = (i + 1) % features.length
-    } else {
-      send("📜 " + rules[j])
-      j = (j + 1) % rules.length
-    }
-  }, 20000)
-}
-
-// 🧠 SELF THINKING
-function selfThinking() {
-  setInterval(() => {
-    let thoughts = [
-      "had server fih features 9wiya bzaf 😈",
-      "tree capitator + vein miner 🔥",
-      "ANIMONI howa malik 👑",
-      "ila chi wa7ed resh ghadi n3a9bo 🚨"
-    ]
-    send("🧠 " + thoughts[Math.floor(Math.random()*thoughts.length)])
-  }, 40000)
-}
-
 // FOLLOW
 function follow() {
   setInterval(() => {
+    if (!bot || !bot.entity) return
+
     let list = Object.values(bot.players).filter(p => p.entity)
     if (!list.length) return
 
     let target = list[Math.floor(Math.random()*list.length)]
-    bot.lookAt(target.entity.position.offset(0,1.6,0))
-    bot.pathfinder.setGoal(new goals.GoalFollow(target.entity, 2), true)
+
+    try {
+      bot.lookAt(target.entity.position.offset(0,1.6,0))
+      bot.pathfinder.setGoal(new goals.GoalFollow(target.entity, 2), true)
+    } catch {}
   }, 5000)
 }
 
@@ -236,8 +190,6 @@ function createBot() {
     bot.pathfinder.setMovements(new Movements(bot, mcData))
 
     handleAuth()
-    smartTalk()
-    selfThinking()
     follow()
   })
 
@@ -257,7 +209,10 @@ function createBot() {
     if (reply && reply !== msg) send(reply)
   })
 
-  bot.on('end', () => setTimeout(createBot, 5000))
+  bot.on('end', () => {
+    console.log("🔄 reconnecting...")
+    setTimeout(createBot, 8000)
+  })
 }
 
 createBot()
