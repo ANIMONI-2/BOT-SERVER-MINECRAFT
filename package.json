@@ -1,6 +1,7 @@
 {
   "name": "animoni-singularity-ai",
-  "version": "5.1.0",
+  "version": "6.0.0",
+  "description": "Advanced Minecraft AI Bot",
   "main": "index.js",
   "scripts": {
     "start": "node index.js"
@@ -10,7 +11,7 @@
     "mineflayer-pathfinder": "^2.4.5",
     "minecraft-data": "^3.60.0",
     "fs-extra": "^11.2.0",
-    "axios": "^1.6.7",
+    "axios": "^1.6.8",
     "string-similarity": "^4.0.4"
   }
 }
