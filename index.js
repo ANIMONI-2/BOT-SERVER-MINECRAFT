@@ -1,7 +1,7 @@
 process.removeAllListeners('warning')
 
 const mineflayer = require('mineflayer')
-const { pathfinder, Movements, goals } = require('mineflayer-pathfinder')
+const { pathfinder, Movements } = require('mineflayer-pathfinder')
 const fs = require('fs-extra')
 const axios = require('axios')
 const similarity = require('string-similarity')
@@ -17,17 +17,14 @@ let warnings = {}
 let lastMessage = ""
 let lastTime = 0
 
-// LOAD
 if (fs.existsSync('brain.json')) brain = fs.readJsonSync('brain.json')
 if (fs.existsSync('players.json')) players = fs.readJsonSync('players.json')
 
-// SAVE
 function saveAll() {
   fs.writeJsonSync('brain.json', brain)
   fs.writeJsonSync('players.json', players)
 }
 
-// INIT
 function ensurePlayer(user) {
   if (!players[user]) players[user] = {}
   if (!conversations[user]) conversations[user] = []
@@ -36,13 +33,11 @@ function ensurePlayer(user) {
   if (!warnings[user]) warnings[user] = 0
 }
 
-// MEMORY
 function addMemory(user, msg) {
   conversations[user].push(msg)
   if (conversations[user].length > 60) conversations[user].shift()
 }
 
-// LEARN
 function learn(msg) {
   if (!brain.includes(msg) && msg.length > 5) {
     brain.push(msg)
@@ -51,7 +46,6 @@ function learn(msg) {
   }
 }
 
-// ANALYZE
 function analyze(user, msg) {
   if (msg.includes('merci')) {
     emotions[user] = "happy"
@@ -65,12 +59,10 @@ function analyze(user, msg) {
   }
 }
 
-// CLEAN TEXT
 function cleanText(text) {
   return text.replace(/[^\x00-\x7F]/g, "")
 }
 
-// STYLE
 function style(text, user) {
   if (user === "ANIMONI") return "ANIMONI HOWA MALIK"
 
@@ -84,7 +76,6 @@ function style(text, user) {
   return text
 }
 
-// AI
 async function askAI(msg) {
   try {
     const res = await axios.get(`https://api.affiliateplus.xyz/api/chatbot?message=${encodeURIComponent(msg)}`)
@@ -94,7 +85,6 @@ async function askAI(msg) {
   }
 }
 
-// LOCAL AI
 function localAI(msg) {
   if (brain.length > 150) {
     const res = similarity.findBestMatch(msg, brain)
@@ -103,7 +93,6 @@ function localAI(msg) {
   return null
 }
 
-// GENERATE
 async function generateReply(user, msg) {
   let ai = await askAI(msg)
   if (ai) return style(ai, user)
@@ -117,7 +106,6 @@ async function generateReply(user, msg) {
   return style("kanfakar", user)
 }
 
-// SEND
 function send(msg) {
   if (!msg || msg === lastMessage) return
   if (msg.startsWith('/')) return
@@ -133,7 +121,6 @@ function send(msg) {
   lastTime = now
 }
 
-// JAIL
 function jailCheck(user) {
   if (warnings[user] >= 3) {
     send(`${user} ghadi l7bs`)
@@ -142,24 +129,6 @@ function jailCheck(user) {
   }
 }
 
-// FOLLOW
-function follow() {
-  setInterval(() => {
-    if (!bot || !bot.entity) return
-
-    let list = Object.values(bot.players).filter(p => p.entity)
-    if (!list.length) return
-
-    let target = list[Math.floor(Math.random()*list.length)]
-
-    try {
-      bot.lookAt(target.entity.position.offset(0,1.6,0))
-      bot.pathfinder.setGoal(new goals.GoalFollow(target.entity, 2), true)
-    } catch {}
-  }, 5000)
-}
-
-// AUTH
 function handleAuth() {
   setTimeout(() => {
     bot.chat('/register Animoni123 Animoni123')
@@ -167,14 +136,42 @@ function handleAuth() {
   }, 3000)
 }
 
-// FILTER
 function isRealPlayer(user, msg) {
   if (!user || user === bot.username) return false
   if (!msg || msg.startsWith('/')) return false
   return true
 }
 
-// BOT
+function antiAFK() {
+  setInterval(() => {
+    if (!bot || !bot.entity) return
+
+    const actions = ['forward', 'back', 'left', 'right']
+
+    actions.forEach(a => bot.setControlState(a, false))
+
+    const move = actions[Math.floor(Math.random() * actions.length)]
+    bot.setControlState(move, true)
+
+    bot.setControlState('sprint', true)
+
+    if (Math.random() > 0.5) {
+      bot.setControlState('jump', true)
+      setTimeout(() => bot.setControlState('jump', false), 400)
+    }
+
+    const yaw = Math.random() * Math.PI * 2
+    const pitch = (Math.random() - 0.5) * Math.PI / 2
+    bot.look(yaw, pitch, true)
+
+    setTimeout(() => {
+      actions.forEach(a => bot.setControlState(a, false))
+      bot.setControlState('sprint', false)
+    }, 2000)
+
+  }, 4000 + Math.random() * 4000)
+}
+
 function createBot() {
   bot = mineflayer.createBot({
     host: 'ANIMONI.aternos.me',
@@ -190,7 +187,7 @@ function createBot() {
     bot.pathfinder.setMovements(new Movements(bot, mcData))
 
     handleAuth()
-    follow()
+    antiAFK()
   })
 
   bot.on('chat', async (user, msg) => {
@@ -210,7 +207,7 @@ function createBot() {
   })
 
   bot.on('end', () => {
-    console.log("🔄 reconnecting...")
+    console.log("reconnecting...")
     setTimeout(createBot, 8000)
   })
 }
