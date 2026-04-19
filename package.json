@@ -1,20 +1,11 @@
 {
   "name": "animoni-ai-bot",
   "version": "1.0.0",
-  "description": "Minecraft AI Bot with memory + chat + follow",
   "main": "index.js",
   "scripts": {
     "start": "node index.js"
   },
   "dependencies": {
-    "mineflayer": "^4.20.0",
-    "mineflayer-pathfinder": "^2.4.5",
-    "minecraft-data": "^3.60.0",
-    "fs-extra": "^11.2.0",
-    "axios": "^1.6.8",
-    "string-similarity": "^4.0.4"
-  },
-  "engines": {
-    "node": ">=18"
+    "mineflayer": "^4.20.0"
   }
 }
