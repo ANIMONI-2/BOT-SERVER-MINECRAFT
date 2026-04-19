@@ -1,165 +1,99 @@
-process.removeAllListeners('warning')
-
 const mineflayer = require('mineflayer')
+const mcDataLoader = require('minecraft-data')
 const { pathfinder, Movements } = require('mineflayer-pathfinder')
-const minecraftData = require('minecraft-data')
+
+const HOST = 'ANIMONI.aternos.me'
+const PORT = 59644
+const USERNAME = 'ANIMONIBOT'
 
 let bot = null
-
 let reconnecting = false
-let ready = false
-let loggedIn = false
 
-let lastChat = ""
-let lastTime = 0
-
-
-// ===================== CREATE BOT =====================
+// ---------------- CONNECT ----------------
 function createBot() {
-
   if (reconnecting) return
   reconnecting = true
 
-  console.log("connecting...")
-
   bot = mineflayer.createBot({
-    host: 'ANIMONI.aternos.me',
-    port: 59644,
-    username: 'ANIMONIBOT',
-    version: false
+    host: HOST,
+    port: PORT,
+    username: USERNAME
   })
 
   bot.loadPlugin(pathfinder)
 
-
-  // ===================== SPAWN =====================
+  // ---------------- SPAWN ----------------
   bot.once('spawn', () => {
-
-    console.log("spawned")
-
-    ready = true
     reconnecting = false
-    loggedIn = false
+    console.log('bot spawned')
 
-    const mcData = minecraftData(bot.version)
+    const mcData = mcDataLoader(bot.version)
     const movements = new Movements(bot, mcData)
     bot.pathfinder.setMovements(movements)
-
-    handleAuth()
   })
 
-
-  // ===================== RESPawn (IMPORTANT) =====================
-  bot.on('respawn', () => {
-    console.log("respawned")
-
-    ready = true
-
-    // نعاود login إلا السيرفر طلب
-    handleAuth()
-  })
-
-
-  // ===================== CHAT =====================
+  // ---------------- CHAT (NO COMMANDS) ----------------
   bot.on('chat', (user, msg) => {
-
-    if (!ready) return
     if (!user || user === bot.username) return
 
-    msg = msg.toLowerCase()
+    const text = msg.toLowerCase()
 
-    if (msg.startsWith('/')) return
-
-    if (msg.includes('hi')) {
-      safeChat(`hello ${user}`)
+    if (text.includes('salam')) {
+      safeChat('wa 3alaykom salam ' + user)
     }
 
-    if (msg.includes('salam')) {
-      safeChat(`wa 3alaykom salam ${user}`)
+    if (text.includes('hello')) {
+      safeChat('hello ' + user)
     }
   })
 
+  // ---------------- DEATH -> AUTO RESPAWN ----------------
+  bot.on('death', () => {
+    setTimeout(() => {
+      try {
+        bot.respawn()
+      } catch {}
+    }, 2000)
+  })
 
-  // ===================== KICK =====================
+  // ---------------- KICK ----------------
   bot.on('kicked', (reason) => {
-    console.log("kicked:", reason)
+    console.log('kicked:', reason)
   })
 
+  // ---------------- ERROR ----------------
+  bot.on('error', () => {})
 
-  // ===================== ERROR =====================
-  bot.on('error', (err) => {
-    console.log("error:", err.message)
-  })
-
-
-  // ===================== END (DISCONNECT) =====================
+  // ---------------- END -> RECONNECT ----------------
   bot.on('end', () => {
+    console.log('disconnected -> reconnect')
 
-    console.log("disconnected -> reconnecting")
-
-    ready = false
-    loggedIn = false
     reconnecting = false
 
-    setTimeout(createBot, 15000)
+    setTimeout(() => {
+      createBot()
+    }, 5000)
   })
 }
 
+// ---------------- SAFE CHAT ----------------
+let lastMsg = ''
+let lastTime = 0
 
-// ===================== AUTH SYSTEM =====================
-function handleAuth() {
-
-  if (!bot || loggedIn) return
-
-  setTimeout(() => {
-    try {
-
-      // نحاول register/login مرة وحدة فقط
-      bot.chat('/register Animoni123 Animoni123')
-
-      setTimeout(() => {
-        bot.chat('/login Animoni123')
-
-        loggedIn = true
-      }, 2500)
-
-    } catch {}
-  }, 5000)
-}
-
-
-// ===================== SAFE CHAT =====================
 function safeChat(msg) {
-
-  if (!bot || !ready) return
-  if (!msg) return
-  if (msg === lastChat) return
+  if (!bot || !msg) return
 
   const now = Date.now()
+  if (msg === lastMsg) return
   if (now - lastTime < 2500) return
 
   try {
     bot.chat(msg)
-
-    lastChat = msg
-    lastTime = now
   } catch {}
+
+  lastMsg = msg
+  lastTime = now
 }
 
-
-// ===================== ANTI FREEZE LIGHT =====================
-setInterval(() => {
-  if (!bot || !ready || !bot.entity) return
-
-  try {
-    bot.look(
-      Math.random() * Math.PI * 2,
-      (Math.random() - 0.5) * 0.2,
-      true
-    )
-  } catch {}
-}, 8000)
-
-
-// ===================== START =====================
+// ---------------- START ----------------
 createBot()
