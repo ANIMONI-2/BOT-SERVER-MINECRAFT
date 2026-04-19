@@ -22,7 +22,7 @@ function createBot() {
     version: '1.12.2'
   })
 
-  // FIX movement kick
+  // fix movement kick
   bot._client.on('position', () => {})
 
   bot.once('spawn', () => {
@@ -68,7 +68,7 @@ function createBot() {
   })
 }
 
-// LOGIN
+// login
 function login() {
   setTimeout(() => {
     try {
@@ -78,7 +78,7 @@ function login() {
   }, 4000)
 }
 
-// SAFE CHAT
+// anti spam chat
 let lastMsg = ''
 let lastTime = 0
 
@@ -97,4 +97,23 @@ function safeChat(msg) {
   lastTime = now
 }
 
-// CHAT
+// chat loop (باش مايبقاش AFK)
+function chatLoop() {
+  setInterval(() => {
+    if (!bot) return
+
+    const msgs = [
+      'salam',
+      'ana hna',
+      'wach kayn chi wa7d',
+      'kanchof server'
+    ]
+
+    const msg = msgs[Math.floor(Math.random() * msgs.length)]
+    safeChat(msg)
+
+  }, 20000)
+}
+
+// start
+createBot()
