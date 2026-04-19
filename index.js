@@ -6,7 +6,7 @@ const HOST = 'ANIMONI.aternos.me'
 const PORT = 59644
 const USERNAME = 'ANIMONIBOT'
 
-let bot = null
+let bot
 let reconnecting = false
 
 function createBot() {
@@ -19,10 +19,12 @@ function createBot() {
     host: HOST,
     port: PORT,
     username: USERNAME,
-    version: false
+    version: '1.12.2'
   })
 
-  //  دخل للسيرفر
+  // FIX movement kick
+  bot._client.on('position', () => {})
+
   bot.once('spawn', () => {
     console.log('bot spawned')
     reconnecting = false
@@ -31,7 +33,6 @@ function createBot() {
     chatLoop()
   })
 
-  //  ردود بسيطة
   bot.on('chat', (user, msg) => {
     if (!user || user === bot.username) return
 
@@ -46,7 +47,6 @@ function createBot() {
     }
   })
 
-  //  respawn
   bot.on('death', () => {
     setTimeout(() => {
       try {
@@ -55,34 +55,30 @@ function createBot() {
     }, 2000)
   })
 
-  // ❗ نشوفو سبب الطرد
-  bot.on('kicked', (reason) => {
-    console.log('kicked:', reason)
+  bot.on('kicked', (r) => {
+    console.log('kicked:', r)
   })
 
   bot.on('error', () => {})
 
-  //  reconnect سريع
   bot.on('end', () => {
     console.log('reconnecting...')
     reconnecting = false
-    setTimeout(createBot, 4000)
+    setTimeout(createBot, 5000)
   })
 }
 
-//  login
+// LOGIN
 function login() {
   setTimeout(() => {
     try {
       bot.chat('/register Animoni123 Animoni123')
-      setTimeout(() => {
-        bot.chat('/login Animoni123')
-      }, 2000)
+      setTimeout(() => bot.chat('/login Animoni123'), 2000)
     } catch {}
   }, 4000)
 }
 
-//  anti spam chat
+// SAFE CHAT
 let lastMsg = ''
 let lastTime = 0
 
@@ -101,22 +97,4 @@ function safeChat(msg) {
   lastTime = now
 }
 
-//  باش مايبقاش AFK (بدون حركة)
-function chatLoop() {
-  setInterval(() => {
-    if (!bot) return
-
-    const msgs = [
-      'ana hna',
-      'wach kayn chi wa7d',
-      'salam',
-      'kanchof server'
-    ]
-
-    const msg = msgs[Math.floor(Math.random() * msgs.length)]
-    safeChat(msg)
-
-  }, 20000)
-}
-
-createBot()
+// CHAT
