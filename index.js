@@ -1,218 +1,126 @@
 process.removeAllListeners('warning')
 
 const mineflayer = require('mineflayer')
-const { pathfinder, Movements, goals } = require('mineflayer-pathfinder')
-const fs = require('fs-extra')
-const axios = require('axios')
-const similarity = require('string-similarity')
+const { pathfinder, Movements } = require('mineflayer-pathfinder')
+const minecraftData = require('minecraft-data')
 
-let bot
-let brain = []
-let players = {}
-let conversations = {}
-let emotions = {}
-let reputation = {}
-let warnings = {}
+const HOST = 'ANIMONI.aternos.me'
+const PORT = 59644
+const USERNAME = 'ANIMONIBOT'
 
-let lastMessage = ""
-let lastTime = 0
+let bot = null
+let reconnecting = false
 
-// LOAD
-if (fs.existsSync('brain.json')) brain = fs.readJsonSync('brain.json')
-if (fs.existsSync('players.json')) players = fs.readJsonSync('players.json')
-
-// SAVE
-function saveAll() {
-  fs.writeJsonSync('brain.json', brain)
-  fs.writeJsonSync('players.json', players)
-}
-
-// INIT
-function ensurePlayer(user) {
-  if (!players[user]) players[user] = {}
-  if (!conversations[user]) conversations[user] = []
-  if (!emotions[user]) emotions[user] = "normal"
-  if (!reputation[user]) reputation[user] = 0
-  if (!warnings[user]) warnings[user] = 0
-}
-
-// MEMORY
-function addMemory(user, msg) {
-  conversations[user].push(msg)
-  if (conversations[user].length > 60) conversations[user].shift()
-}
-
-// LEARN
-function learn(msg) {
-  if (!brain.includes(msg) && msg.length > 5) {
-    brain.push(msg)
-    if (brain.length > 6000) brain.shift()
-    saveAll()
-  }
-}
-
-// ANALYZE
-function analyze(user, msg) {
-  if (msg.includes('merci')) {
-    emotions[user] = "happy"
-    reputation[user] += 2
-  } else if (msg.includes('hmar') || msg.includes('skot')) {
-    emotions[user] = "angry"
-    reputation[user] -= 4
-    warnings[user]++
-  } else {
-    emotions[user] = "normal"
-  }
-}
-
-// CLEAN TEXT
-function cleanText(text) {
-  return text.replace(/[^\x00-\x7F]/g, "")
-}
-
-// STYLE
-function style(text, user) {
-  if (user === "ANIMONI") return "ANIMONI HOWA MALIK"
-
-  if (warnings[user] >= 3) return "khlfti l9awanin"
-  if (reputation[user] > 8) return "OK " + text
-  if (reputation[user] < -6) return "sir b3d"
-
-  if (emotions[user] === "happy") return text
-  if (emotions[user] === "angry") return "ma3ajbni hadchi"
-
-  return text
-}
-
-// AI
-async function askAI(msg) {
-  try {
-    const res = await axios.get(`https://api.affiliateplus.xyz/api/chatbot?message=${encodeURIComponent(msg)}`)
-    return cleanText(res.data.message)
-  } catch {
-    return null
-  }
-}
-
-// LOCAL AI
-function localAI(msg) {
-  if (brain.length > 150) {
-    const res = similarity.findBestMatch(msg, brain)
-    if (res.bestMatch.rating > 0.7) return res.bestMatch.target
-  }
-  return null
-}
-
-// GENERATE
-async function generateReply(user, msg) {
-  let ai = await askAI(msg)
-  if (ai) return style(ai, user)
-
-  let local = localAI(msg)
-  if (local) return style(local, user)
-
-  if (msg.includes("tree")) return style("t9dar thsr shajra kamla b drba bl axe", user)
-  if (msg.includes("iron")) return style("vein mining kaykhdem m3a ores", user)
-
-  return style("kanfakar", user)
-}
-
-// SEND
-function send(msg) {
-  if (!msg || msg === lastMessage) return
-  if (msg.startsWith('/')) return
-
-  msg = cleanText(msg)
-
-  const now = Date.now()
-  if (now - lastTime < 2000) return
-
-  if (bot) bot.chat(msg)
-
-  lastMessage = msg
-  lastTime = now
-}
-
-// JAIL
-function jailCheck(user) {
-  if (warnings[user] >= 3) {
-    send(`${user} ghadi l7bs`)
-    warnings[user] = 0
-    reputation[user] = -5
-  }
-}
-
-// FOLLOW
-function follow() {
-  setInterval(() => {
-    if (!bot || !bot.entity) return
-
-    let list = Object.values(bot.players).filter(p => p.entity)
-    if (!list.length) return
-
-    let target = list[Math.floor(Math.random()*list.length)]
-
-    try {
-      bot.lookAt(target.entity.position.offset(0,1.6,0))
-      bot.pathfinder.setGoal(new goals.GoalFollow(target.entity, 2), true)
-    } catch {}
-  }, 5000)
-}
-
-// AUTH
-function handleAuth() {
-  setTimeout(() => {
-    bot.chat('/register Animoni123 Animoni123')
-    setTimeout(() => bot.chat('/login Animoni123'), 2000)
-  }, 3000)
-}
-
-// FILTER
-function isRealPlayer(user, msg) {
-  if (!user || user === bot.username) return false
-  if (!msg || msg.startsWith('/')) return false
-  return true
-}
-
-// BOT
 function createBot() {
+  if (reconnecting) return
+  reconnecting = true
+
+  console.log('connecting...')
+
   bot = mineflayer.createBot({
-    host: 'ANIMONI.aternos.me',
-    port: 59644,
-    username: 'ANIMONIBOT',
-    version: '1.12.2'
+    host: HOST,
+    port: PORT,
+    username: USERNAME,
+    version: false
   })
 
   bot.loadPlugin(pathfinder)
 
   bot.once('spawn', () => {
-    const mcData = require('minecraft-data')(bot.version)
-    bot.pathfinder.setMovements(new Movements(bot, mcData))
+    reconnecting = false
+    console.log('bot spawned')
 
-    handleAuth()
-    follow()
+    const mcData = minecraftData(bot.version)
+    const movements = new Movements(bot, mcData)
+    bot.pathfinder.setMovements(movements)
+
+    login()
+    antiAFK()
   })
 
-  bot.on('chat', async (user, msg) => {
-    if (!isRealPlayer(user, msg)) return
+  // CHAT (بسيط)
+  bot.on('chat', (user, msg) => {
+    if (!user || user === bot.username) return
 
-    msg = msg.toLowerCase()
+    const text = msg.toLowerCase()
 
-    ensurePlayer(user)
-    addMemory(user, msg)
-    analyze(user, msg)
-    learn(msg)
+    if (text.includes('salam')) {
+      safeChat('wa 3alaykom salam ' + user)
+    }
 
-    jailCheck(user)
-
-    let reply = await generateReply(user, msg)
-    if (reply && reply !== msg) send(reply)
+    if (text.includes('hello')) {
+      safeChat('hello ' + user)
+    }
   })
+
+  // RESPAWN
+  bot.on('death', () => {
+    setTimeout(() => {
+      try {
+        bot.respawn()
+      } catch {}
+    }, 2000)
+  })
+
+  // KICK
+  bot.on('kicked', (r) => {
+    console.log('kicked:', r)
+  })
+
+  bot.on('error', () => {})
 
   bot.on('end', () => {
-    console.log("🔄 reconnecting...")
-    setTimeout(createBot, 8000)
+    console.log('reconnecting...')
+    reconnecting = false
+    setTimeout(createBot, 7000)
   })
+}
+
+// LOGIN
+function login() {
+  setTimeout(() => {
+    try {
+      bot.chat('/register Animoni123 Animoni123')
+      setTimeout(() => bot.chat('/login Animoni123'), 2000)
+    } catch {}
+  }, 4000)
+}
+
+// SAFE CHAT
+let lastMsg = ''
+let lastTime = 0
+
+function safeChat(msg) {
+  if (!bot || !msg) return
+
+  const now = Date.now()
+  if (msg === lastMsg) return
+  if (now - lastTime < 2500) return
+
+  try {
+    bot.chat(msg)
+  } catch {}
+
+  lastMsg = msg
+  lastTime = now
+}
+
+// ANTI AFK
+function antiAFK() {
+  setInterval(() => {
+    if (!bot || !bot.entity) return
+
+    try {
+      bot.setControlState('jump', true)
+      setTimeout(() => bot.setControlState('jump', false), 300)
+
+      bot.look(
+        Math.random() * Math.PI * 2,
+        (Math.random() - 0.5) * 0.4,
+        true
+      )
+    } catch {}
+  }, 6000)
 }
 
 createBot()
