@@ -1,7 +1,6 @@
 {
-  "name": "stable-minecraft-bot",
+  "name": "stable-mc-bot",
   "version": "1.0.0",
-  "description": "Stable Mineflayer Bot",
   "main": "index.js",
   "scripts": {
     "start": "node index.js"
