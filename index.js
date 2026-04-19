@@ -1,97 +1,75 @@
-// كيشيل warnings ديال Node باش ما يطلعش spam فالكونسول
 process.removeAllListeners('warning')
 
-// كنستورد مكتبة صنع البوت ديال Minecraft
 const mineflayer = require('mineflayer')
-
-// كنستورد pathfinder باش يمشي ويتحرك
 const { pathfinder, Movements } = require('mineflayer-pathfinder')
-
-// باش نعرف بيانات الماب (blocks, mobs…)
 const minecraftData = require('minecraft-data')
 
-// هاد المتغير فيه البوت
 let bot = null
 
-// باش نعرف واش البوت خدام ولا لا
-let ready = false
-
-// باش مايديرش reconnect بزاف
 let reconnecting = false
+let ready = false
+let loggedIn = false
 
-// آخر رسالة باش مانكرروش chat
-let lastMessage = ""
+let lastChat = ""
 let lastTime = 0
 
 
-// ==================== إنشاء البوت ====================
+// ===================== CREATE BOT =====================
 function createBot() {
 
-  // إلا كان كاين reconnect راه ما نعاودوش نخلقوه
   if (reconnecting) return
   reconnecting = true
 
   console.log("connecting...")
 
-  // إنشاء البوت
   bot = mineflayer.createBot({
-
-    // IP ديال السيرفر
     host: 'ANIMONI.aternos.me',
-
-    // البورت ديال السيرفر
     port: 59644,
-
-    // اسم البوت
     username: 'ANIMONIBOT',
-
-    // نخليوها false باش تختار النسخة تلقائياً
     version: false
   })
 
-  // نضيف pathfinder للبوت
   bot.loadPlugin(pathfinder)
 
 
-  // ==================== عند الدخول ====================
+  // ===================== SPAWN =====================
   bot.once('spawn', () => {
 
-    console.log("connected")
+    console.log("spawned")
 
     ready = true
     reconnecting = false
+    loggedIn = false
 
-    // معلومات الماب
     const mcData = minecraftData(bot.version)
-
-    // حركة البوت
     const movements = new Movements(bot, mcData)
     bot.pathfinder.setMovements(movements)
 
-    // تسجيل الدخول للسيرفر (اختياري)
-    auth()
-
-    // حركة خفيفة باش ما يتحسبش AFK
-    antiAFK()
+    handleAuth()
   })
 
 
-  // ==================== chat ====================
+  // ===================== RESPawn (IMPORTANT) =====================
+  bot.on('respawn', () => {
+    console.log("respawned")
+
+    ready = true
+
+    // نعاود login إلا السيرفر طلب
+    handleAuth()
+  })
+
+
+  // ===================== CHAT =====================
   bot.on('chat', (user, msg) => {
 
-    // إلا مازال ما خدامش
     if (!ready) return
+    if (!user || user === bot.username) return
 
-    // ما يردش على راسو
-    if (user === bot.username) return
-
-    // تحويل النص لصغير
     msg = msg.toLowerCase()
 
-    // تجاهل الأوامر /login /msg ...
     if (msg.startsWith('/')) return
 
-    // ردود بسيطة
     if (msg.includes('hi')) {
       safeChat(`hello ${user}`)
     }
@@ -102,43 +80,47 @@ function createBot() {
   })
 
 
-  // ==================== kick log ====================
+  // ===================== KICK =====================
   bot.on('kicked', (reason) => {
     console.log("kicked:", reason)
   })
 
 
-  // ==================== error ====================
+  // ===================== ERROR =====================
   bot.on('error', (err) => {
     console.log("error:", err.message)
   })
 
 
-  // ==================== reconnect ====================
+  // ===================== END (DISCONNECT) =====================
   bot.on('end', () => {
 
-    console.log("disconnected, reconnecting...")
+    console.log("disconnected -> reconnecting")
 
     ready = false
+    loggedIn = false
     reconnecting = false
 
-    // انتظار قبل إعادة الاتصال باش ما يطيحش السيرفر
     setTimeout(createBot, 15000)
   })
 }
 
 
-// ==================== تسجيل الدخول ====================
-function auth() {
+// ===================== AUTH SYSTEM =====================
+function handleAuth() {
+
+  if (!bot || loggedIn) return
+
   setTimeout(() => {
     try {
 
-      // تسجيل
+      // نحاول register/login مرة وحدة فقط
       bot.chat('/register Animoni123 Animoni123')
 
-      // login
       setTimeout(() => {
         bot.chat('/login Animoni123')
+
+        loggedIn = true
       }, 2500)
 
     } catch {}
@@ -146,60 +128,38 @@ function auth() {
 }
 
 
-// ==================== chat آمن ====================
+// ===================== SAFE CHAT =====================
 function safeChat(msg) {
 
-  // إلا ما كاينش بوت
   if (!bot || !ready) return
-
-  // إلا فارغ
   if (!msg) return
-
-  // منع التكرار
-  if (msg === lastMessage) return
+  if (msg === lastChat) return
 
   const now = Date.now()
-
-  // منع spam
   if (now - lastTime < 2500) return
 
   try {
     bot.chat(msg)
 
-    lastMessage = msg
+    lastChat = msg
     lastTime = now
   } catch {}
 }
 
 
-// ==================== anti AFK ====================
-function antiAFK() {
+// ===================== ANTI FREEZE LIGHT =====================
+setInterval(() => {
+  if (!bot || !ready || !bot.entity) return
 
-  setInterval(() => {
-
-    if (!bot || !ready || !bot.entity) return
-
-    try {
-
-      // يقفز باش ما يتحسبش AFK
-      bot.setControlState('jump', true)
-
-      setTimeout(() => {
-        bot.setControlState('jump', false)
-      }, 300)
-
-      // كيدور راسو شوية
-      bot.look(
-        Math.random() * Math.PI * 2,
-        (Math.random() - 0.5) * 0.3,
-        true
-      )
-
-    } catch {}
-
-  }, 7000)
-}
+  try {
+    bot.look(
+      Math.random() * Math.PI * 2,
+      (Math.random() - 0.5) * 0.2,
+      true
+    )
+  } catch {}
+}, 8000)
 
 
-// ==================== تشغيل البوت ====================
+// ===================== START =====================
 createBot()
