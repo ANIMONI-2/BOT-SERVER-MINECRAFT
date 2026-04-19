@@ -6,7 +6,7 @@ const HOST = 'ANIMONI.aternos.me'
 const PORT = 59644
 const USERNAME = 'ANIMONIBOT'
 
-let bot
+let bot = null
 let reconnecting = false
 
 function createBot() {
@@ -22,31 +22,35 @@ function createBot() {
     version: '1.12.2'
   })
 
-  // fix movement kick
-  bot._client.on('position', () => {})
-
   bot.once('spawn', () => {
-    console.log('bot spawned')
+    console.log('bot joined server')
     reconnecting = false
 
     login()
-    chatLoop()
   })
 
+  // LOGIN
+  function login() {
+    setTimeout(() => {
+      try {
+        bot.chat('/register Animoni123 Animoni123')
+        setTimeout(() => {
+          bot.chat('/login Animoni123')
+        }, 2000)
+      } catch {}
+    }, 5000)
+  }
+
+  // SIMPLE CHAT
   bot.on('chat', (user, msg) => {
     if (!user || user === bot.username) return
 
-    const text = msg.toLowerCase()
-
-    if (text.includes('salam')) {
-      safeChat('wa 3alaykom salam ' + user)
-    }
-
-    if (text.includes('hello')) {
-      safeChat('hello ' + user)
+    if (msg.toLowerCase().includes('salam')) {
+      safeChat('wa 3alaykom salam')
     }
   })
 
+  // RESPAWN
   bot.on('death', () => {
     setTimeout(() => {
       try {
@@ -55,65 +59,33 @@ function createBot() {
     }, 2000)
   })
 
-  bot.on('kicked', (r) => {
-    console.log('kicked:', r)
-  })
+  // DEBUG
+  bot.on('kicked', (r) => console.log('kicked:', r))
+  bot.on('error', (e) => console.log('error:', e.message))
 
-  bot.on('error', () => {})
-
+  // RECONNECT
   bot.on('end', () => {
     console.log('reconnecting...')
     reconnecting = false
-    setTimeout(createBot, 5000)
+    setTimeout(createBot, 4000)
   })
 }
 
-// login
-function login() {
-  setTimeout(() => {
-    try {
-      bot.chat('/register Animoni123 Animoni123')
-      setTimeout(() => bot.chat('/login Animoni123'), 2000)
-    } catch {}
-  }, 4000)
-}
-
-// anti spam chat
-let lastMsg = ''
+// SAFE CHAT
+let last = ''
 let lastTime = 0
 
 function safeChat(msg) {
-  if (!bot || !msg) return
-
   const now = Date.now()
-  if (msg === lastMsg) return
+  if (msg === last) return
   if (now - lastTime < 3000) return
 
   try {
     bot.chat(msg)
   } catch {}
 
-  lastMsg = msg
+  last = msg
   lastTime = now
 }
 
-// chat loop (باش مايبقاش AFK)
-function chatLoop() {
-  setInterval(() => {
-    if (!bot) return
-
-    const msgs = [
-      'salam',
-      'ana hna',
-      'wach kayn chi wa7d',
-      'kanchof server'
-    ]
-
-    const msg = msgs[Math.floor(Math.random() * msgs.length)]
-    safeChat(msg)
-
-  }, 20000)
-}
-
-// start
 createBot()
