@@ -1,6 +1,7 @@
 {
-  "name": "animoni-bot",
-  "version": "1.0.0",
+  "name": "animoni-singularity-ai",
+  "version": "6.1.0",
+  "description": "Stable Minecraft AI Bot (Anti-crash + reconnect safe)",
   "main": "index.js",
   "scripts": {
     "start": "node index.js"
@@ -11,6 +12,9 @@
   "dependencies": {
     "mineflayer": "^4.20.0",
     "mineflayer-pathfinder": "^2.4.5",
-    "minecraft-data": "^3.60.0"
+    "minecraft-data": "^3.60.0",
+    "fs-extra": "^11.2.0",
+    "axios": "^1.6.8",
+    "string-similarity": "^4.0.4"
   }
 }
