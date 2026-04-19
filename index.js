@@ -1,14 +1,14 @@
 process.removeAllListeners('warning')
 
 const mineflayer = require('mineflayer')
-const { pathfinder, Movements, goals } = require('mineflayer-pathfinder')
+const { pathfinder, Movements } = require('mineflayer-pathfinder')
 const minecraftData = require('minecraft-data')
 
-let bot
-let reconnecting = false
+let bot = null
 let ready = false
+let reconnecting = false
 
-let lastMsg = ""
+let lastChat = ""
 let lastTime = 0
 
 // ---------------- CREATE BOT ----------------
@@ -29,19 +29,17 @@ function createBot() {
 
   // ---------------- SPAWN ----------------
   bot.once('spawn', () => {
-    console.log("bot connected")
+    console.log("connected")
 
-    reconnecting = false
     ready = true
+    reconnecting = false
 
     const mcData = minecraftData(bot.version)
     const movements = new Movements(bot, mcData)
     bot.pathfinder.setMovements(movements)
 
-    handleAuth()
-
+    auth()
     antiAFK()
-    followPlayers()
   })
 
   // ---------------- CHAT ----------------
@@ -51,12 +49,15 @@ function createBot() {
 
     msg = msg.toLowerCase()
 
-    if (msg.includes('salam')) {
-      safeChat(`wa 3alaykom salam ${user}`)
-    }
+    // ignore commands
+    if (msg.startsWith('/')) return
 
     if (msg.includes('hi')) {
       safeChat(`hello ${user}`)
+    }
+
+    if (msg.includes('salam')) {
+      safeChat(`wa 3alaykom salam ${user}`)
     }
   })
 
@@ -69,19 +70,21 @@ function createBot() {
     console.log("error:", err.message)
   })
 
-  // ---------------- RECONNECT FIX ----------------
+  // ---------------- SAFE RECONNECT ----------------
   bot.on('end', () => {
-    console.log("disconnected -> reconnecting")
+    console.log("disconnected, reconnecting...")
 
     ready = false
-    reconnecting = false
 
-    setTimeout(createBot, 12000)
+    setTimeout(() => {
+      reconnecting = false
+      createBot()
+    }, 15000)
   })
 }
 
 // ---------------- AUTH ----------------
-function handleAuth() {
+function auth() {
   setTimeout(() => {
     try {
       bot.chat('/register Animoni123 Animoni123')
@@ -97,7 +100,7 @@ function handleAuth() {
 function safeChat(msg) {
   if (!bot || !ready) return
   if (!msg) return
-  if (msg === lastMsg) return
+  if (msg === lastChat) return
 
   const now = Date.now()
   if (now - lastTime < 2500) return
@@ -105,7 +108,7 @@ function safeChat(msg) {
   try {
     bot.chat(msg)
 
-    lastMsg = msg
+    lastChat = msg
     lastTime = now
   } catch {}
 }
@@ -129,25 +132,6 @@ function antiAFK() {
       )
     } catch {}
   }, 7000)
-}
-
-// ---------------- FOLLOW PLAYERS ----------------
-function followPlayers() {
-  setInterval(() => {
-    if (!bot || !ready || !bot.players) return
-
-    const list = Object.values(bot.players).filter(p => p.entity)
-    if (list.length === 0) return
-
-    const target = list[Math.floor(Math.random() * list.length)]
-
-    try {
-      bot.pathfinder.setGoal(
-        new goals.GoalFollow(target.entity, 2),
-        true
-      )
-    } catch {}
-  }, 9000)
 }
 
 // ---------------- START ----------------
