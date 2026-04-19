@@ -18,10 +18,7 @@ let warnings = {}
 let lastMessage = ""
 let lastTime = 0
 
-let reconnecting = false
-let afkInterval = null
-
-// LOAD
+// LOAD SAFE
 if (fs.existsSync('brain.json')) brain = fs.readJsonSync('brain.json')
 if (fs.existsSync('players.json')) players = fs.readJsonSync('players.json')
 
@@ -31,7 +28,7 @@ function saveAll() {
   fs.writeJsonSync('players.json', players)
 }
 
-// PLAYER INIT
+// INIT PLAYER
 function ensurePlayer(user) {
   if (!players[user]) players[user] = {}
   if (!conversations[user]) conversations[user] = []
@@ -69,11 +66,11 @@ function analyze(user, msg) {
   }
 }
 
-// CLEAN
+// CLEAN (important for kick fix)
 function cleanText(text = "") {
   return text
-    .replace(/[\u{10000}-\u{10FFFF}]/gu, '')
     .replace(/[^\x00-\x7F]/g, '')
+    .replace(/[\u{10000}-\u{10FFFF}]/gu, '')
 }
 
 // STYLE
@@ -90,7 +87,7 @@ function style(text, user) {
   return text
 }
 
-// AI
+// AI ONLINE
 async function askAI(msg) {
   try {
     const res = await axios.get(
@@ -111,7 +108,7 @@ function localAI(msg) {
   return null
 }
 
-// GENERATE
+// REPLY ENGINE
 async function generateReply(user, msg) {
   let ai = await askAI(msg)
   if (ai) return style(ai, user)
@@ -119,10 +116,13 @@ async function generateReply(user, msg) {
   let local = localAI(msg)
   if (local) return style(local, user)
 
+  if (msg.includes("tree")) return style("t9dar thsr shajra", user)
+  if (msg.includes("iron")) return style("vein mining kaykhdem", user)
+
   return null
 }
 
-// SEND
+// SEND SAFE
 function send(msg) {
   if (!msg || msg === lastMessage) return
   if (msg.startsWith('/')) return
@@ -138,6 +138,15 @@ function send(msg) {
   lastTime = now
 }
 
+// JAIL
+function jailCheck(user) {
+  if (warnings[user] >= 3) {
+    send(user + " ghadi l7bs")
+    warnings[user] = 0
+    reputation[user] = -5
+  }
+}
+
 // AUTH
 function handleAuth() {
   setTimeout(() => {
@@ -148,38 +157,22 @@ function handleAuth() {
   }, 3000)
 }
 
-// ANTI AFK FIX (NO STACKING)
-function antiAFK() {
-  if (afkInterval) clearInterval(afkInterval)
-
-  afkInterval = setInterval(() => {
-    if (!bot || !bot.entity) return
-
-    try {
-      bot.setControlState('jump', true)
-      setTimeout(() => bot.setControlState('jump', false), 300)
-
-      bot.look(
-        Math.random() * Math.PI * 2,
-        (Math.random() - 0.5) * 0.5,
-        true
-      )
-    } catch {}
-  }, 5000)
+// FILTER
+function isRealPlayer(user, msg) {
+  if (!user || user === bot.username) return false
+  if (!msg || msg.startsWith('/')) return false
+  return true
 }
 
-// BOT CREATE
+// BOT CREATE (STABLE + NO FOLLOW)
 function createBot() {
-  if (reconnecting) return
-  reconnecting = true
-
   console.log("connecting...")
 
   bot = mineflayer.createBot({
     host: 'ANIMONI.aternos.me',
     port: 59644,
     username: 'ANIMONIBOT',
-    version: false
+    version: '1.12.2'
   })
 
   bot.loadPlugin(pathfinder)
@@ -189,12 +182,12 @@ function createBot() {
     bot.pathfinder.setMovements(new Movements(bot, mcData))
 
     handleAuth()
-    antiAFK()
-
-    reconnecting = false
+    console.log("bot ready")
   })
 
   bot.on('chat', async (user, msg) => {
+    if (!isRealPlayer(user, msg)) return
+
     msg = msg.toLowerCase()
 
     ensurePlayer(user)
@@ -202,19 +195,18 @@ function createBot() {
     analyze(user, msg)
     learn(msg)
 
-    const reply = await generateReply(user, msg)
+    jailCheck(user)
+
+    let reply = await generateReply(user, msg)
     if (reply) send(reply)
   })
 
-  bot.on('end', () => {
-    console.log("disconnected")
-    setTimeout(() => {
-      reconnecting = false
-      createBot()
-    }, 10000)
-  })
-
+  bot.on('kicked', (r) => console.log("kicked:", r))
   bot.on('error', () => {})
+  bot.on('end', () => {
+    console.log("reconnecting...")
+    setTimeout(createBot, 10000)
+  })
 }
 
 createBot()
