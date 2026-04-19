@@ -1,13 +1,11 @@
 {
-  "name": "animoni-ai-bot",
+  "name": "animoni-bot",
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
     "start": "node index.js"
   },
   "dependencies": {
-    "mineflayer": "4.10.0",
-    "minecraft-protocol": "1.47.0",
-    "prismarine-chat": "1.8.0"
+    "mineflayer": "4.10.0"
   }
 }
