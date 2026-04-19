@@ -1,11 +1,13 @@
 {
-  "name": "animoni-bot",
+  "name": "stable-minecraft-bot",
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
     "start": "node index.js"
   },
   "dependencies": {
-    "mineflayer": "4.10.0"
+    "mineflayer": "^4.20.0",
+    "mineflayer-pathfinder": "^2.4.5",
+    "minecraft-data": "^3.60.0"
   }
 }
