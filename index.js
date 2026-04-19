@@ -18,6 +18,9 @@ let warnings = {}
 let lastMessage = ""
 let lastTime = 0
 
+let reconnecting = false
+let afkInterval = null
+
 // LOAD
 if (fs.existsSync('brain.json')) brain = fs.readJsonSync('brain.json')
 if (fs.existsSync('players.json')) players = fs.readJsonSync('players.json')
@@ -66,10 +69,10 @@ function analyze(user, msg) {
   }
 }
 
-// CLEAN (IMPORTANT FIX)
+// CLEAN
 function cleanText(text = "") {
   return text
-    .replace(/[\u{10000}-\u{10FFFF}]/gu, '') // remove emojis (important for kick fix)
+    .replace(/[\u{10000}-\u{10FFFF}]/gu, '')
     .replace(/[^\x00-\x7F]/g, '')
 }
 
@@ -116,13 +119,10 @@ async function generateReply(user, msg) {
   let local = localAI(msg)
   if (local) return style(local, user)
 
-  if (msg.includes("tree")) return style("t9dar thsr shajra", user)
-  if (msg.includes("iron")) return style("vein mining kaykhdem", user)
-
   return null
 }
 
-// SEND (FIX SPAM + CRASH)
+// SEND
 function send(msg) {
   if (!msg || msg === lastMessage) return
   if (msg.startsWith('/')) return
@@ -132,19 +132,10 @@ function send(msg) {
   const now = Date.now()
   if (now - lastTime < 2500) return
 
-  if (bot && bot.chat) bot.chat(msg)
+  if (bot) bot.chat(msg)
 
   lastMessage = msg
   lastTime = now
-}
-
-// JAIL
-function jailCheck(user) {
-  if (warnings[user] >= 3) {
-    send(user + " ghadi l7bs")
-    warnings[user] = 0
-    reputation[user] = -5
-  }
 }
 
 // AUTH
@@ -157,16 +148,11 @@ function handleAuth() {
   }, 3000)
 }
 
-// REAL PLAYER FILTER
-function isRealPlayer(user, msg) {
-  if (!user || user === bot.username) return false
-  if (!msg || msg.startsWith('/')) return false
-  return true
-}
-
-// ANTI AFK (SAFE)
+// ANTI AFK FIX (NO STACKING)
 function antiAFK() {
-  setInterval(() => {
+  if (afkInterval) clearInterval(afkInterval)
+
+  afkInterval = setInterval(() => {
     if (!bot || !bot.entity) return
 
     try {
@@ -182,8 +168,11 @@ function antiAFK() {
   }, 5000)
 }
 
-// BOT CREATE (STABLE RECONNECT)
+// BOT CREATE
 function createBot() {
+  if (reconnecting) return
+  reconnecting = true
+
   console.log("connecting...")
 
   bot = mineflayer.createBot({
@@ -201,11 +190,11 @@ function createBot() {
 
     handleAuth()
     antiAFK()
+
+    reconnecting = false
   })
 
   bot.on('chat', async (user, msg) => {
-    if (!isRealPlayer(user, msg)) return
-
     msg = msg.toLowerCase()
 
     ensurePlayer(user)
@@ -213,16 +202,16 @@ function createBot() {
     analyze(user, msg)
     learn(msg)
 
-    jailCheck(user)
-
     const reply = await generateReply(user, msg)
     if (reply) send(reply)
   })
 
-  // IMPORTANT FIX: no infinite spam reconnect loop
   bot.on('end', () => {
-    console.log("disconnected, reconnect in 10s")
-    setTimeout(createBot, 10000)
+    console.log("disconnected")
+    setTimeout(() => {
+      reconnecting = false
+      createBot()
+    }, 10000)
   })
 
   bot.on('error', () => {})
