@@ -1,10 +1,13 @@
 {
   "name": "animoni-singularity-ai",
-  "version": "6.0.0",
+  "version": "6.0.1",
   "description": "Advanced Minecraft AI Bot",
   "main": "index.js",
   "scripts": {
     "start": "node index.js"
+  },
+  "engines": {
+    "node": ">=18"
   },
   "dependencies": {
     "mineflayer": "^4.20.0",
