@@ -10,12 +10,16 @@ let bot = null
 let reconnecting = false
 let lastConnect = 0
 
-function createBot() {
+function sleep(ms) {
+  return new Promise(res => setTimeout(res, ms))
+}
+
+async function createBot() {
   const now = Date.now()
 
-  // anti spam reconnect (throttle fix)
-  if (now - lastConnect < 15000) return
+  // anti spam reconnect
   if (reconnecting) return
+  if (now - lastConnect < 30000) return
 
   reconnecting = true
   lastConnect = now
@@ -26,18 +30,21 @@ function createBot() {
     host: HOST,
     port: PORT,
     username: USERNAME,
-    version: false
+    version: '1.20.4',
+    keepAlive: true,
+    checkTimeoutInterval: 60000
   })
 
   bot.loadPlugin(pathfinder)
 
-  bot.once('spawn', () => {
+  bot.once('spawn', async () => {
     console.log('bot spawned')
     reconnecting = false
 
     const mcData = mcDataLoader(bot.version)
     bot.pathfinder.setMovements(new Movements(bot, mcData))
 
+    await sleep(8000)
     login()
   })
 
@@ -62,7 +69,7 @@ function createBot() {
       try {
         bot.respawn()
       } catch {}
-    }, 2000)
+    }, 3000)
   })
 
   // error safe
@@ -75,26 +82,28 @@ function createBot() {
     console.log('kicked:', reason)
   })
 
-  // reconnect safe
-  bot.on('end', () => {
+  // reconnect stable (IMPORTANT)
+  bot.on('end', async () => {
     console.log('disconnected -> reconnect')
 
     reconnecting = false
-    setTimeout(createBot, 10000)
+
+    await sleep(30000)
+    createBot()
   })
 }
 
 // login system
 function login() {
-  setTimeout(() => {
-    try {
-      bot.chat('/register Animoni123 Animoni123')
+  try {
+    bot.chat('/register Animoni123 Animoni123')
 
-      setTimeout(() => {
+    setTimeout(() => {
+      try {
         bot.chat('/login Animoni123')
-      }, 3000)
-    } catch {}
-  }, 5000)
+      } catch {}
+    }, 3000)
+  } catch {}
 }
 
 // safe chat
