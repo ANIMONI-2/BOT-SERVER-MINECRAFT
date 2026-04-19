@@ -1,8 +1,6 @@
 process.removeAllListeners('warning')
 
 const mineflayer = require('mineflayer')
-const { pathfinder, Movements } = require('mineflayer-pathfinder')
-const minecraftData = require('minecraft-data')
 
 const HOST = 'ANIMONI.aternos.me'
 const PORT = 59644
@@ -24,21 +22,16 @@ function createBot() {
     version: false
   })
 
-  bot.loadPlugin(pathfinder)
-
+  //  دخل للسيرفر
   bot.once('spawn', () => {
-    reconnecting = false
     console.log('bot spawned')
-
-    const mcData = minecraftData(bot.version)
-    const movements = new Movements(bot, mcData)
-    bot.pathfinder.setMovements(movements)
+    reconnecting = false
 
     login()
-    antiAFK()
+    chatLoop()
   })
 
-  // CHAT (بسيط)
+  //  ردود بسيطة
   bot.on('chat', (user, msg) => {
     if (!user || user === bot.username) return
 
@@ -53,7 +46,7 @@ function createBot() {
     }
   })
 
-  // RESPAWN
+  //  respawn
   bot.on('death', () => {
     setTimeout(() => {
       try {
@@ -62,31 +55,34 @@ function createBot() {
     }, 2000)
   })
 
-  // KICK
-  bot.on('kicked', (r) => {
-    console.log('kicked:', r)
+  // ❗ نشوفو سبب الطرد
+  bot.on('kicked', (reason) => {
+    console.log('kicked:', reason)
   })
 
   bot.on('error', () => {})
 
+  //  reconnect سريع
   bot.on('end', () => {
     console.log('reconnecting...')
     reconnecting = false
-    setTimeout(createBot, 7000)
+    setTimeout(createBot, 4000)
   })
 }
 
-// LOGIN
+//  login
 function login() {
   setTimeout(() => {
     try {
       bot.chat('/register Animoni123 Animoni123')
-      setTimeout(() => bot.chat('/login Animoni123'), 2000)
+      setTimeout(() => {
+        bot.chat('/login Animoni123')
+      }, 2000)
     } catch {}
   }, 4000)
 }
 
-// SAFE CHAT
+//  anti spam chat
 let lastMsg = ''
 let lastTime = 0
 
@@ -95,7 +91,7 @@ function safeChat(msg) {
 
   const now = Date.now()
   if (msg === lastMsg) return
-  if (now - lastTime < 2500) return
+  if (now - lastTime < 3000) return
 
   try {
     bot.chat(msg)
@@ -105,22 +101,22 @@ function safeChat(msg) {
   lastTime = now
 }
 
-// ANTI AFK
-function antiAFK() {
+//  باش مايبقاش AFK (بدون حركة)
+function chatLoop() {
   setInterval(() => {
-    if (!bot || !bot.entity) return
+    if (!bot) return
 
-    try {
-      bot.setControlState('jump', true)
-      setTimeout(() => bot.setControlState('jump', false), 300)
+    const msgs = [
+      'ana hna',
+      'wach kayn chi wa7d',
+      'salam',
+      'kanchof server'
+    ]
 
-      bot.look(
-        Math.random() * Math.PI * 2,
-        (Math.random() - 0.5) * 0.4,
-        true
-      )
-    } catch {}
-  }, 6000)
+    const msg = msgs[Math.floor(Math.random() * msgs.length)]
+    safeChat(msg)
+
+  }, 20000)
 }
 
 createBot()
