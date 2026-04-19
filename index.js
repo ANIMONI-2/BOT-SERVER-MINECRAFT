@@ -7,6 +7,7 @@ const axios = require('axios')
 const similarity = require('string-similarity')
 
 let bot
+
 let brain = []
 let players = {}
 let conversations = {}
@@ -17,14 +18,17 @@ let warnings = {}
 let lastMessage = ""
 let lastTime = 0
 
+// LOAD
 if (fs.existsSync('brain.json')) brain = fs.readJsonSync('brain.json')
 if (fs.existsSync('players.json')) players = fs.readJsonSync('players.json')
 
+// SAVE
 function saveAll() {
   fs.writeJsonSync('brain.json', brain)
   fs.writeJsonSync('players.json', players)
 }
 
+// PLAYER INIT
 function ensurePlayer(user) {
   if (!players[user]) players[user] = {}
   if (!conversations[user]) conversations[user] = []
@@ -33,19 +37,22 @@ function ensurePlayer(user) {
   if (!warnings[user]) warnings[user] = 0
 }
 
+// MEMORY
 function addMemory(user, msg) {
   conversations[user].push(msg)
-  if (conversations[user].length > 60) conversations[user].shift()
+  if (conversations[user].length > 40) conversations[user].shift()
 }
 
+// LEARN
 function learn(msg) {
   if (!brain.includes(msg) && msg.length > 5) {
     brain.push(msg)
-    if (brain.length > 6000) brain.shift()
+    if (brain.length > 3000) brain.shift()
     saveAll()
   }
 }
 
+// ANALYZE
 function analyze(user, msg) {
   if (msg.includes('merci')) {
     emotions[user] = "happy"
@@ -59,11 +66,14 @@ function analyze(user, msg) {
   }
 }
 
-// حذف أي كاراكترات غير ASCII (باش ما يكونش illegal_characters)
-function cleanText(text) {
-  return text.replace(/[^\x00-\x7F]/g, "")
+// CLEAN (IMPORTANT FIX)
+function cleanText(text = "") {
+  return text
+    .replace(/[\u{10000}-\u{10FFFF}]/gu, '') // remove emojis (important for kick fix)
+    .replace(/[^\x00-\x7F]/g, '')
 }
 
+// STYLE
 function style(text, user) {
   if (user === "ANIMONI") return "ANIMONI HOWA MALIK"
 
@@ -77,23 +87,28 @@ function style(text, user) {
   return text
 }
 
+// AI
 async function askAI(msg) {
   try {
-    const res = await axios.get(`https://api.affiliateplus.xyz/api/chatbot?message=${encodeURIComponent(msg)}`)
+    const res = await axios.get(
+      `https://api.affiliateplus.xyz/api/chatbot?message=${encodeURIComponent(msg)}`
+    )
     return cleanText(res.data.message)
   } catch {
     return null
   }
 }
 
+// LOCAL AI
 function localAI(msg) {
-  if (brain.length > 150) {
+  if (brain.length > 100) {
     const res = similarity.findBestMatch(msg, brain)
     if (res.bestMatch.rating > 0.7) return res.bestMatch.target
   }
   return null
 }
 
+// GENERATE
 async function generateReply(user, msg) {
   let ai = await askAI(msg)
   if (ai) return style(ai, user)
@@ -101,12 +116,13 @@ async function generateReply(user, msg) {
   let local = localAI(msg)
   if (local) return style(local, user)
 
-  if (msg.includes("tree")) return style("t9dar thsr shajra kamla b drba bl axe", user)
-  if (msg.includes("iron")) return style("vein mining kaykhdem m3a ores", user)
+  if (msg.includes("tree")) return style("t9dar thsr shajra", user)
+  if (msg.includes("iron")) return style("vein mining kaykhdem", user)
 
-  return style("kanfakar", user)
+  return null
 }
 
+// SEND (FIX SPAM + CRASH)
 function send(msg) {
   if (!msg || msg === lastMessage) return
   if (msg.startsWith('/')) return
@@ -114,14 +130,15 @@ function send(msg) {
   msg = cleanText(msg)
 
   const now = Date.now()
-  if (now - lastTime < 2000) return
+  if (now - lastTime < 2500) return
 
-  if (bot) bot.chat(msg)
+  if (bot && bot.chat) bot.chat(msg)
 
   lastMessage = msg
   lastTime = now
 }
 
+// JAIL
 function jailCheck(user) {
   if (warnings[user] >= 3) {
     send(user + " ghadi l7bs")
@@ -130,65 +147,50 @@ function jailCheck(user) {
   }
 }
 
-// anti-AFK قوي
-function antiAFK() {
-  setInterval(() => {
-    if (!bot || !bot.entity) return
-
-    try {
-      const actions = ['forward', 'back', 'left', 'right']
-
-      actions.forEach(a => bot.setControlState(a, false))
-
-      const move = actions[Math.floor(Math.random() * actions.length)]
-      bot.setControlState(move, true)
-      bot.setControlState('sprint', true)
-
-      if (Math.random() > 0.4) {
-        bot.setControlState('jump', true)
-        setTimeout(() => bot.setControlState('jump', false), 300)
-      }
-
-      const yaw = Math.random() * Math.PI * 2
-      const pitch = (Math.random() - 0.5) * Math.PI
-      bot.look(yaw, pitch, true)
-
-      if (bot.heldItem) {
-        bot.activateItem()
-      }
-
-      if (Math.random() < 0.2) {
-        bot.chat("afk")
-      }
-
-      setTimeout(() => {
-        actions.forEach(a => bot.setControlState(a, false))
-        bot.setControlState('sprint', false)
-      }, 2000)
-
-    } catch {}
-  }, 3000 + Math.random() * 3000)
-}
-
+// AUTH
 function handleAuth() {
   setTimeout(() => {
-    bot.chat('/register Animoni123 Animoni123')
-    setTimeout(() => bot.chat('/login Animoni123'), 2000)
+    try {
+      bot.chat('/register Animoni123 Animoni123')
+      setTimeout(() => bot.chat('/login Animoni123'), 2000)
+    } catch {}
   }, 3000)
 }
 
+// REAL PLAYER FILTER
 function isRealPlayer(user, msg) {
   if (!user || user === bot.username) return false
   if (!msg || msg.startsWith('/')) return false
   return true
 }
 
+// ANTI AFK (SAFE)
+function antiAFK() {
+  setInterval(() => {
+    if (!bot || !bot.entity) return
+
+    try {
+      bot.setControlState('jump', true)
+      setTimeout(() => bot.setControlState('jump', false), 300)
+
+      bot.look(
+        Math.random() * Math.PI * 2,
+        (Math.random() - 0.5) * 0.5,
+        true
+      )
+    } catch {}
+  }, 5000)
+}
+
+// BOT CREATE (STABLE RECONNECT)
 function createBot() {
+  console.log("connecting...")
+
   bot = mineflayer.createBot({
     host: 'ANIMONI.aternos.me',
     port: 59644,
     username: 'ANIMONIBOT',
-    version: '1.12.2'
+    version: false
   })
 
   bot.loadPlugin(pathfinder)
@@ -199,8 +201,6 @@ function createBot() {
 
     handleAuth()
     antiAFK()
-
-    bot.setQuickBarSlot(0)
   })
 
   bot.on('chat', async (user, msg) => {
@@ -215,13 +215,14 @@ function createBot() {
 
     jailCheck(user)
 
-    let reply = await generateReply(user, msg)
-    if (reply && reply !== msg) send(reply)
+    const reply = await generateReply(user, msg)
+    if (reply) send(reply)
   })
 
+  // IMPORTANT FIX: no infinite spam reconnect loop
   bot.on('end', () => {
-    console.log("reconnecting...")
-    setTimeout(createBot, 8000)
+    console.log("disconnected, reconnect in 10s")
+    setTimeout(createBot, 10000)
   })
 
   bot.on('error', () => {})
