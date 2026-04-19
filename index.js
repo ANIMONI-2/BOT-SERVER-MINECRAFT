@@ -6,7 +6,7 @@ const HOST = 'ANIMONI.aternos.me'
 const PORT = 59644
 const USERNAME = 'ANIMONIBOT'
 
-let bot = null
+let bot
 let reconnecting = false
 
 function createBot() {
@@ -22,36 +22,36 @@ function createBot() {
     version: '1.12.2'
   })
 
+  // دخل للسيرفر
   bot.once('spawn', () => {
-    console.log('bot joined server')
+    console.log('spawned')
     reconnecting = false
 
-    login()
+    doLogin()
   })
 
-  // LOGIN
-  function login() {
+  // LOGIN ضروري
+  function doLogin() {
     setTimeout(() => {
       try {
         bot.chat('/register Animoni123 Animoni123')
+        console.log('register sent')
+
         setTimeout(() => {
           bot.chat('/login Animoni123')
+          console.log('login sent')
         }, 2000)
-      } catch {}
-    }, 5000)
+
+      } catch (e) {
+        console.log('login error')
+      }
+    }, 4000)
   }
 
-  // SIMPLE CHAT
-  bot.on('chat', (user, msg) => {
-    if (!user || user === bot.username) return
-
-    if (msg.toLowerCase().includes('salam')) {
-      safeChat('wa 3alaykom salam')
-    }
-  })
-
-  // RESPAWN
+  // RESPAWN إذا مات
   bot.on('death', () => {
+    console.log('bot died -> respawn')
+
     setTimeout(() => {
       try {
         bot.respawn()
@@ -60,32 +60,21 @@ function createBot() {
   })
 
   // DEBUG
-  bot.on('kicked', (r) => console.log('kicked:', r))
-  bot.on('error', (e) => console.log('error:', e.message))
-
-  // RECONNECT
-  bot.on('end', () => {
-    console.log('reconnecting...')
-    reconnecting = false
-    setTimeout(createBot, 4000)
+  bot.on('kicked', (r) => {
+    console.log('KICKED:', r)
   })
-}
 
-// SAFE CHAT
-let last = ''
-let lastTime = 0
+  bot.on('error', (e) => {
+    console.log('ERROR:', e.message)
+  })
 
-function safeChat(msg) {
-  const now = Date.now()
-  if (msg === last) return
-  if (now - lastTime < 3000) return
+  // RECONNECT مباشر
+  bot.on('end', () => {
+    console.log('disconnected -> reconnect now')
 
-  try {
-    bot.chat(msg)
-  } catch {}
-
-  last = msg
-  lastTime = now
+    reconnecting = false
+    setTimeout(createBot, 3000)
+  })
 }
 
 createBot()
