@@ -6,10 +6,12 @@ const HOST = 'ANIMONI.aternos.me'
 const PORT = 59644
 const USERNAME = 'ANIMONIBOT'
 
+// إذا السيرفر فيه تسجيل
+const PASSWORD = 'Animoni123'
+
 let bot = null
 let reconnecting = false
 
-// ---------------- CONNECT ----------------
 function createBot() {
   if (reconnecting) return
   reconnecting = true
@@ -30,9 +32,11 @@ function createBot() {
     const mcData = mcDataLoader(bot.version)
     const movements = new Movements(bot, mcData)
     bot.pathfinder.setMovements(movements)
+
+    handleAuth()
   })
 
-  // ---------------- CHAT (NO COMMANDS) ----------------
+  // ---------------- CHAT ----------------
   bot.on('chat', (user, msg) => {
     if (!user || user === bot.username) return
 
@@ -47,7 +51,7 @@ function createBot() {
     }
   })
 
-  // ---------------- DEATH -> AUTO RESPAWN ----------------
+  // ---------------- RESPAWN ----------------
   bot.on('death', () => {
     setTimeout(() => {
       try {
@@ -61,19 +65,29 @@ function createBot() {
     console.log('kicked:', reason)
   })
 
-  // ---------------- ERROR ----------------
   bot.on('error', () => {})
 
-  // ---------------- END -> RECONNECT ----------------
   bot.on('end', () => {
-    console.log('disconnected -> reconnect')
-
+    console.log('reconnecting...')
     reconnecting = false
-
-    setTimeout(() => {
-      createBot()
-    }, 5000)
+    setTimeout(createBot, 5000)
   })
+}
+
+// ---------------- LOGIN / REGISTER FIX ----------------
+function handleAuth() {
+  setTimeout(() => {
+    try {
+      bot.chat(`/register ${PASSWORD} ${PASSWORD}`)
+      console.log('register sent')
+
+      setTimeout(() => {
+        bot.chat(`/login ${PASSWORD}`)
+        console.log('login sent')
+      }, 2000)
+
+    } catch {}
+  }, 4000)
 }
 
 // ---------------- SAFE CHAT ----------------
