@@ -8,16 +8,15 @@ const USERNAME = 'ANIMONIBOT'
 
 let bot = null
 let reconnecting = false
-
 let lastConnect = 0
 
 function createBot() {
   const now = Date.now()
 
-  // ANTI THROTTLE (IMPORTANT)
+  // anti spam reconnect (throttle fix)
   if (now - lastConnect < 15000) return
-
   if (reconnecting) return
+
   reconnecting = true
   lastConnect = now
 
@@ -27,7 +26,7 @@ function createBot() {
     host: HOST,
     port: PORT,
     username: USERNAME,
-    version: '1.12.2'
+    version: false
   })
 
   bot.loadPlugin(pathfinder)
@@ -42,7 +41,7 @@ function createBot() {
     login()
   })
 
-  // CHAT SAFE
+  // chat
   bot.on('chat', (user, msg) => {
     if (!user || user === bot.username) return
 
@@ -57,7 +56,7 @@ function createBot() {
     }
   })
 
-  // RESPawn FIX
+  // respawn fix
   bot.on('death', () => {
     setTimeout(() => {
       try {
@@ -66,39 +65,39 @@ function createBot() {
     }, 2000)
   })
 
-  // KICK HANDLE
-  bot.on('kicked', (reason) => {
-    console.log('kicked:', reason)
-  })
-
-  // ERROR HANDLE
+  // error safe
   bot.on('error', (err) => {
     console.log('error:', err.message)
   })
 
-  // RECONNECT (SLOW)
+  // kick log
+  bot.on('kicked', (reason) => {
+    console.log('kicked:', reason)
+  })
+
+  // reconnect safe
   bot.on('end', () => {
     console.log('disconnected -> reconnect')
 
     reconnecting = false
-
     setTimeout(createBot, 10000)
   })
 }
 
-// LOGIN SAFE
+// login system
 function login() {
   setTimeout(() => {
     try {
       bot.chat('/register Animoni123 Animoni123')
+
       setTimeout(() => {
         bot.chat('/login Animoni123')
-      }, 2500)
+      }, 3000)
     } catch {}
   }, 5000)
 }
 
-// SAFE CHAT (ANTI SPAM)
+// safe chat
 let lastMsg = ''
 let lastTime = 0
 
@@ -118,23 +117,4 @@ function safeChat(msg) {
   lastTime = now
 }
 
-// ANTI AFK (SAFE)
-function antiAFK() {
-  setInterval(() => {
-    if (!bot || !bot.entity) return
-
-    try {
-      bot.setControlState('jump', true)
-      setTimeout(() => bot.setControlState('jump', false), 300)
-
-      bot.look(
-        Math.random() * Math.PI * 2,
-        (Math.random() - 0.5) * 0.4,
-        true
-      )
-    } catch {}
-  }, 6000)
-}
-
 createBot()
-antiAFK()
