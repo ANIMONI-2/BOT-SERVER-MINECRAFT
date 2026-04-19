@@ -65,16 +65,16 @@ function analyze(user, msg) {
 
 // STYLE 😈
 function style(text, user) {
-  if (user === "ANIMONI") return "👑 ANIMONI HOWA MALIK 😈🔥"
+  if (user === "ANIMONI") return "ANIMONI HOWA MALIK "
 
-  if (warnings[user] >= 3) return "🚨 khlfti l9awanin… ghadi tmchi l7bs 😈"
-  if (reputation[user] > 8) return "🤝 " + text
-  if (reputation[user] < -6) return "😡 sir b3d"
+  if (warnings[user] >= 3) return "khlfti l9awanin… ghadi tmchi l7bs"
+  if (reputation[user] > 8) return "slm " + text
+  if (reputation[user] < -6) return "sir b3d"
 
-  if (emotions[user] === "happy") return text + " 😂"
-  if (emotions[user] === "angry") return "😡 ma3ajbni hadchi"
+  if (emotions[user] === "happy") return text + " hhh"
+  if (emotions[user] === "angry") return "ma3jbnich hadchi"
 
-  return text + " 😎"
+  return text + " boss"
 }
 
 // AI
@@ -105,14 +105,14 @@ async function generateReply(user, msg) {
   if (local) return style(local, user)
 
   if (msg.includes("tree")) {
-    return style("t9dar tksr shajra kamla b axe wahda 🌳", user)
+    return style("t9dar tksr shajra kamla b axe wahda", user)
   }
 
   if (msg.includes("iron")) {
-    return style("Vein Mining  kaykhdem m3a ga3 ores (iron, coal, gold, diamond, emerald, redstone, lapis, copper, quartz…) ila hrsty wa7ed b lbikax ga3 li7dah kaythrsso⛏️", user)
+    return style("Vein Mining  kaykhdem m3a ga3 ores (iron, coal, gold, diamond, emerald, redstone, lapis, copper, quartz…) ila hrsty wa7ed b lbikax ga3 li7dah kaythrsso", user)
   }
 
-  return style("kanfakar 😈", user)
+  return style("kanfkr", user)
 }
 
 // SEND
@@ -128,25 +128,25 @@ function send(msg) {
   lastTime = now
 }
 
-// 🚨 JAIL
+// JAIL
 function jailCheck(user) {
   if (warnings[user] >= 3) {
-    send(`🚨 ${user} ghadi tmchi l7bs 😈`)
+    send(`🚨 ${user} ghadi tmchi l7bs`)
     warnings[user] = 0
     reputation[user] = -5
   }
 }
 
-// 📢 FEATURES (UPDATED)
+// FEATURES (UPDATED)
 const features = [
-  "t9dar tksr shajra kamla b axe wahda 🌳🔥",
-  "Vein Mining  kaykhdem m3a ga3 ores (iron, coal, gold, diamond, emerald, redstone, lapis, copper, quartz…) ila hrsty wa7ed b lbikax ga3 li7dah kaythrsso⛏️",
-  "ila mati kayban sandou9 dyal items 💀",
-  "night vision dyma 🌙",
-  "server khdam 24/7 ⏰",
-  "katban l2i7datiyate 📍",
-  "teams kaynin 🤝",
-  "one sleep 🌞",
+  "t9dar tksr shajra kamla b axe wahda",
+  "Vein Mining  kaykhdem m3a ga3 ores (iron, coal, gold, diamond, emerald, redstone, lapis, copper, quartz…) ila hrsty wa7ed b lbikax ga3 li7dah kaythrsso",
+  "ila mati kayban sandou9 dyal items",
+  "night vision dyma",
+  "server khdam 24/7",
+  "katban l2i7datiyate",
+  "teams kaynin",
+  "one sleep",
   "Bash tmchi 3and chi player: /tpa <smiyat l3ab>",
   "Bash tdir chi player yji 3andk: /tpahere <smiyat l3ab>",
   "Bash t9bl tpa li tssiftat lik: /tpaccept",
@@ -155,13 +155,13 @@ const features = [
   "Bash trj3 l lobby: /lobby"
 ]
 
-// 📜 RULES
+// RULES
 const rules = [
-  "mamnou3 hacks 🚫",
-  "mamnou3 l’itiham b batil 🚫",
-  "mamnou3 spam 🚫",
-  "respect players 🛡️",
-  "ila khelfti chi 9anon ghadi tmchi l7bs 😈"
+  "mamnou3 hacks",
+  "mamnou3 l’itiham b lbatle",
+  "mamnou3 spam",
+  "7tarmo b3diyatkom",
+  "ila khelfti chi 9anon ghadi tmchi l7bs"
 ]
 
 // SMART ANNOUNCE
@@ -171,25 +171,25 @@ function smartTalk() {
 
   setInterval(() => {
     if (Math.random() < 0.6) {
-      send("📢 " + features[i])
+      send("mohim " + features[i])
       i = (i + 1) % features.length
     } else {
-      send("📜 " + rules[j])
+      send("9awanin " + rules[j])
       j = (j + 1) % rules.length
     }
   }, 20000)
 }
 
-// 🧠 SELF THINKING
+// SELF THINKING
 function selfThinking() {
   setInterval(() => {
     let thoughts = [
-      "had server fih features 9wiya bzaf 😈",
-      "tree capitator + vein miner 🔥",
-      "ANIMONI howa malik 👑",
-      "ila chi wa7ed ghesh ghadi n3a9bo 🚨"
+      "had server fih features 9wiya bzaf",
+      "tree capitator + vein miner",
+      "ANIMONI howa malik",
+      "ila chi wa7ed ghesh ghadi n3a9bo"
     ]
-    send("🧠 " + thoughts[Math.floor(Math.random()*thoughts.length)])
+    send("IQ " + thoughts[Math.floor(Math.random()*thoughts.length)])
   }, 40000)
 }
 
