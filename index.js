@@ -59,6 +59,7 @@ function analyze(user, msg) {
   }
 }
 
+// حذف أي كاراكترات غير ASCII (باش ما يكونش illegal_characters)
 function cleanText(text) {
   return text.replace(/[^\x00-\x7F]/g, "")
 }
@@ -123,10 +124,50 @@ function send(msg) {
 
 function jailCheck(user) {
   if (warnings[user] >= 3) {
-    send(`${user} ghadi l7bs`)
+    send(user + " ghadi l7bs")
     warnings[user] = 0
     reputation[user] = -5
   }
+}
+
+// anti-AFK قوي
+function antiAFK() {
+  setInterval(() => {
+    if (!bot || !bot.entity) return
+
+    try {
+      const actions = ['forward', 'back', 'left', 'right']
+
+      actions.forEach(a => bot.setControlState(a, false))
+
+      const move = actions[Math.floor(Math.random() * actions.length)]
+      bot.setControlState(move, true)
+      bot.setControlState('sprint', true)
+
+      if (Math.random() > 0.4) {
+        bot.setControlState('jump', true)
+        setTimeout(() => bot.setControlState('jump', false), 300)
+      }
+
+      const yaw = Math.random() * Math.PI * 2
+      const pitch = (Math.random() - 0.5) * Math.PI
+      bot.look(yaw, pitch, true)
+
+      if (bot.heldItem) {
+        bot.activateItem()
+      }
+
+      if (Math.random() < 0.2) {
+        bot.chat("afk")
+      }
+
+      setTimeout(() => {
+        actions.forEach(a => bot.setControlState(a, false))
+        bot.setControlState('sprint', false)
+      }, 2000)
+
+    } catch {}
+  }, 3000 + Math.random() * 3000)
 }
 
 function handleAuth() {
@@ -140,36 +181,6 @@ function isRealPlayer(user, msg) {
   if (!user || user === bot.username) return false
   if (!msg || msg.startsWith('/')) return false
   return true
-}
-
-function antiAFK() {
-  setInterval(() => {
-    if (!bot || !bot.entity) return
-
-    const actions = ['forward', 'back', 'left', 'right']
-
-    actions.forEach(a => bot.setControlState(a, false))
-
-    const move = actions[Math.floor(Math.random() * actions.length)]
-    bot.setControlState(move, true)
-
-    bot.setControlState('sprint', true)
-
-    if (Math.random() > 0.5) {
-      bot.setControlState('jump', true)
-      setTimeout(() => bot.setControlState('jump', false), 400)
-    }
-
-    const yaw = Math.random() * Math.PI * 2
-    const pitch = (Math.random() - 0.5) * Math.PI / 2
-    bot.look(yaw, pitch, true)
-
-    setTimeout(() => {
-      actions.forEach(a => bot.setControlState(a, false))
-      bot.setControlState('sprint', false)
-    }, 2000)
-
-  }, 4000 + Math.random() * 4000)
 }
 
 function createBot() {
@@ -188,6 +199,8 @@ function createBot() {
 
     handleAuth()
     antiAFK()
+
+    bot.setQuickBarSlot(0)
   })
 
   bot.on('chat', async (user, msg) => {
@@ -210,6 +223,8 @@ function createBot() {
     console.log("reconnecting...")
     setTimeout(createBot, 8000)
   })
+
+  bot.on('error', () => {})
 }
 
 createBot()
