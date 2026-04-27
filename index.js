@@ -226,7 +226,7 @@ function createBot() {
     host: 'ANIMONI.aternos.me',
     port: 59644,
     username: 'ANIMONIBOT',
-    version: '1.12.2'
+    version: '1.20.4'
   })
 
   bot.loadPlugin(pathfinder)
