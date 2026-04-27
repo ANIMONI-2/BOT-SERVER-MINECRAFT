@@ -225,7 +225,7 @@ function createBot() {
   bot = mineflayer.createBot({
     host: 'ANIMONI.aternos.me',
     port: 59644,
-    username: 'ANIMONIBOT',
+    username: 'ANIMONIBOT2',
     version: '1.12.2'
   })
 
