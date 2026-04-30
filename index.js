@@ -1,4 +1,4 @@
-const mineflayer = require('mineflayer')
+kconst mineflayer = require('mineflayer')
 const { pathfinder, Movements, goals } = require('mineflayer-pathfinder')
 const fs = require('fs-extra')
 const axios = require('axios')
